@@ -35,7 +35,6 @@ def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct,
     
     # 1. หัวข้อรายงาน
     title = doc.add_heading('รายงานสรุปผลการวิเคราะห์การเร่งการทรุดตัวด้วย PVD', level=1)
-if title.runs:
     title.runs[0].font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)  # <--- แก้เป็นแบบนี้
     
     doc.add_paragraph(f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y')}")
