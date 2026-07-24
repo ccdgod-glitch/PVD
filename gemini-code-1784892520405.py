@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 import io
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # ---------------------------------------------------------
 # 1. PAGE CONFIGURATION & CUSTOM CSS
@@ -27,9 +28,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. HELPER FUNCTION: สรุปผลเป็นคำพูดใน WORD REPORT
+# 2. HELPER FUNCTION: สรุปผล + สร้างตารางใน WORD REPORT
 # ---------------------------------------------------------
-def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct, Ur_pct, Uv_pct, S_final, S_target, days_90):
+def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct, Ur_pct, Uv_pct, S_final, S_target, days_90, d_w_mm, d_e_m, n, Fn, df):
     doc = Document()
     
     # 1. หัวข้อรายงาน
@@ -40,32 +41,122 @@ def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct,
     doc.add_paragraph(f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y')}")
     doc.add_paragraph("-" * 55)
     
-    # 2. ข้อมูลพารามิเตอร์
+    # 2. ข้อมูลพารามิเตอร์การออกแบบ
     doc.add_heading('1. ข้อมูลและพารามิเตอร์การออกแบบ (Input Parameters)', level=2)
     p1 = doc.add_paragraph()
-    p1.add_run("จากการประเมินพื้นที่โครงการ ซึ่งมีชั้นดินอ่อนความหนา ")
-    p1.add_run(f"{H_soil:.1f} เมตร ").bold = True
-    p1.add_run(f"ทำการติดตั้งแผ่นระบายน้ำแนวดิ่ง (PVD) ความลึก {H_pvd:.1f} เมตร โดยจัดวางในรูปแบบ ")
-    p1.add_run(f"{pattern} ").bold = True
-    p1.add_run("ที่ระยะห่างการติดตั้ง (Spacing) เท่ากับ ")
-    p1.add_run(f"{S:.2f} เมตร ").bold = True
-    p1.add_run(f"กำหนดค่าสัมประสิทธิ์การอัดตัวคายน้ำ Cv = {Cv:.1f} cm²/day และ Cr = {Cr:.1f} cm²/day")
+    p1.add_run(f"ทำการติดตั้ง PVD ในชั้นดินอ่อนความหนา {H_soil:.1f} m โดยจัดวางในรูปแบบ {pattern} ที่ระยะห่าง S = {S:.2f} m รายละเอียดพารามิเตอร์สรุปดังตารางด้านล่าง:")
 
-    # 3. ผลการคำนวณ
-    doc.add_heading('2. ผลการวิเคราะห์และคำนวณ ณ เวลาเป้าหมาย', level=2)
+    # --- WORD TABLE 1: Input Parameters Table ---
+    t1 = doc.add_table(rows=1, cols=3)
+    t1.style = 'Table Grid'
+    hdr_cells1 = t1.rows[0].cells
+    hdr_cells1[0].text = 'พารามิเตอร์ (Parameter)'
+    hdr_cells1[1].text = 'ค่าที่ใช้ (Value)'
+    hdr_cells1[2].text = 'หน่วย (Unit)'
+    
+    for cell in hdr_cells1:
+        cell.paragraphs[0].runs[0].font.bold = True
+        
+    params_data = [
+        ("รูปแบบการจัดวาง (Pattern)", f"{pattern}", "-"),
+        ("ระยะห่างการติดตั้ง (S)", f"{S:.2f}", "m"),
+        ("ความหนาชั้นดินอ่อน (H_soil)", f"{H_soil:.1f}", "m"),
+        ("ความลึกแผ่น PVD (H_pvd)", f"{H_pvd:.1f}", "m"),
+        ("ค่าสัมประสิทธิ์ Cv", f"{Cv:.1f}", "cm²/day"),
+        ("ค่าสัมประสิทธิ์ Cr", f"{Cr:.1f}", "cm²/day"),
+        ("ขนาดเส้นผ่านศูนย์กลาง dw / de", f"{d_w_mm:.1f} mm / {d_e_m:.2f} m", "-"),
+        ("อัตราส่วน n (de/dw)", f"{n:.2f}", "-"),
+        ("Drain Spacing Factor F(n)", f"{Fn:.3f}", "-"),
+    ]
+    
+    for p_name, p_val, p_unit in params_data:
+        row_cells = t1.add_row().cells
+        row_cells[0].text = p_name
+        row_cells[1].text = p_val
+        row_cells[2].text = p_unit
+        
+    doc.add_paragraph() # เว้นบรรทัด
+
+    # 3. ผลการคำนวณ ณ วันเป้าหมาย
+    doc.add_heading('2. ผลการคำนวณ ณ วันเป้าหมาย (Target Day Results)', level=2)
     status_text = "บรรลุตามข้อกำหนดการออกแบบ (>= 90%)" if Uav_pct >= 90 else "ยังไม่บรรลุตามเป้าหมาย (< 90%)"
     
     p2 = doc.add_paragraph()
     p2.add_run(f"ณ ระยะเวลาเป้าหมายที่ ")
     p2.add_run(f"{target_day} วัน ").bold = True
-    p2.add_run("ภายหลังการติดตั้ง PVD และถมดินเพิ่มน้ำหนัก ผลการคำนวณพารามิเตอร์สำคัญมีดังนี้:\n\n")
-    p2.add_run(f"  • อัตราการอัดตัวคายน้ำแนวดิ่งของชั้นดิน (Uv): {Uv_pct:.2f}%\n")
-    p2.add_run(f"  • อัตราการอัดตัวคายน้ำแนวรัศมีผ่าน PVD (Ur): {Ur_pct:.2f}%\n")
-    p2.add_run(f"  • อัตราการอัดตัวคายน้ำเฉลี่ยรวม (Uav): {Uav_pct:.2f}% [{status_text}]\n")
-    p2.add_run(f"  • ปริมาณการทรุดตัวที่เกิดขึ้นแล้ว (St): {S_target:.3f} เมตร (จากค่าการทรุดตัวสูงสุด Sfinal = {S_final:.3f} เมตร)")
+    p2.add_run("ผลการคำนวณอัตราการอัดตัวคายน้ำและการทรุดตัว สรุปได้ดังตารางด้านล่าง:")
 
-    # 4. บทสรุปเชิงวิศวกรรม
-    doc.add_heading('3. สรุปผลและข้อเสนอแนะเชิงวิศวกรรม', level=2)
+    # --- WORD TABLE 2: Target Day Summary Table ---
+    t2 = doc.add_table(rows=1, cols=3)
+    t2.style = 'Table Grid'
+    hdr_cells2 = t2.rows[0].cells
+    hdr_cells2[0].text = 'รายการคำนวณ'
+    hdr_cells2[1].text = 'ผลการคำนวณ'
+    hdr_cells2[2].text = 'หมายเหตุ / เกณฑ์'
+
+    for cell in hdr_cells2:
+        cell.paragraphs[0].runs[0].font.bold = True
+
+    results_data = [
+        ("Degree of Consolidation แนวดิ่ง (Uv)", f"{Uv_pct:.2f}%", "Terzaghi Theory"),
+        ("Degree of Consolidation แนวรัศมี (Ur)", f"{Ur_pct:.2f}%", "Barron / Hansbo"),
+        ("Degree of Consolidation เฉลี่ยรวม (Uav)", f"{Uav_pct:.2f}%", status_text),
+        ("การทรุดตัวที่เกิดขึ้นแล้ว (St)", f"{S_target:.3f} m", f"จาก S_final = {S_final:.3f} m"),
+        ("เวลาบรรลุ U = 90%", f"{days_90} วัน", "เป้าหมายมาตรฐาน")
+    ]
+
+    for r_name, r_val, r_note in results_data:
+        row_cells = t2.add_row().cells
+        row_cells[0].text = r_name
+        row_cells[1].text = r_val
+        row_cells[2].text = r_note
+
+    doc.add_paragraph() # เว้นบรรทัด
+
+    # 4. ตารางพัฒนาการตามช่วงเวลา (Progress Table)
+    doc.add_heading('3. ตารางพัฒนาการอัดตัวคายน้ำและการทรุดตัวตามช่วงเวลา', level=2)
+    
+    # --- WORD TABLE 3: Consolidation Progress Over Time Table ---
+    t3 = doc.add_table(rows=1, cols=6)
+    t3.style = 'Table Grid'
+    hdr_cells3 = t3.rows[0].cells
+    hdr_cells3[0].text = 'เวลา t (วัน)'
+    hdr_cells3[1].text = 'U_r (%)'
+    hdr_cells3[2].text = 'U_v (%)'
+    hdr_cells3[3].text = 'U_av (%)'
+    hdr_cells3[4].text = 'การทรุดตัว S_t (m)'
+    hdr_cells3[5].text = 'สถานะ (> 90%)'
+
+    for cell in hdr_cells3:
+        cell.paragraphs[0].runs[0].font.bold = True
+
+    test_days = sorted(list(set([30, 60, target_day, 180, 270, 365])))
+    for d_val in test_days:
+        if d_val <= 365:
+            r = df[df["Day"] == d_val].iloc[0]
+            ur_p, uv_p, uav_p, st_p = r['U_r'], r['U_v'], r['U_av'], r['Settlement']
+            st_status = "ผ่านเกณฑ์" if uav_p >= 90 else "ยังไม่ถึงเกณฑ์"
+        else:
+            ur_p = (1 - np.exp((-8 * (Cr * d_val) / (d_e_m * 100)**2) / Fn)) * 100
+            tv_tmp = (Cv * d_val) / ((H_soil*100/2)**2)
+            uv_tmp = np.sqrt(4 * tv_tmp) / np.pi if tv_tmp <= 0.286 else 1 - (10**(-0.085 - 0.933 * tv_tmp))
+            uv_p = min(uv_tmp * 100, 100)
+            uav_p = 100 * (1 - (1 - ur_p/100) * (1 - uv_p/100))
+            st_p = (uav_p / 100.0) * S_final
+            st_status = "ผ่านเกณฑ์" if uav_p >= 90 else "ยังไม่ถึงเกณฑ์"
+
+        row_cells = t3.add_row().cells
+        row_cells[0].text = f"{d_val} วัน"
+        row_cells[1].text = f"{ur_p:.2f}%"
+        row_cells[2].text = f"{uv_p:.2f}%"
+        row_cells[3].text = f"{uav_p:.2f}%"
+        row_cells[4].text = f"{st_p:.3f} m"
+        row_cells[5].text = st_status
+
+    doc.add_paragraph() # เว้นบรรทัด
+
+    # 5. สรุปผลเชิงวิศวกรรม
+    doc.add_heading('4. สรุปผลและข้อเสนอแนะเชิงวิศวกรรม', level=2)
     p3 = doc.add_paragraph()
     
     if Uav_pct >= 90.0:
@@ -369,12 +460,11 @@ with tab_summary:
         st.warning("- การติดตั้ง PVD ระยะนี้ยังไม่สามารถทำให้ดินทรุดตัวถึง 90% ได้ภายใน 1 ปี แนะนำให้ **ลดระยะห่าง S** ลง")
 
     st.markdown("---")
-    st.markdown("#### 📄 ส่งออกรายงานสรุปผลสรุปเป็นคำพูด (Word Document)")
-    st.write("กดปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์เอกสาร `.docx` สรุปผลเชิงวิศวกรรมเรียบร้อยแล้ว")
+    st.markdown("#### 📄 ส่งออกรายงานสรุปผลพร้อมตารางคำนวณ (Word Document)")
+    st.write("กดปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์เอกสาร `.docx` สรุปผลพร้อมตารางคำนวณประกอบรายงาน")
     
     S_target = (Uav_target_pct / 100.0) * S_final
     
-    # สร้างไฟล์ Word ในหน่วยความจำ RAM และยื่นปุ่มดาวน์โหลดให้ผู้ใช้
     doc_file = generate_word_report(
         pattern=pattern,
         S=S,
@@ -388,11 +478,16 @@ with tab_summary:
         Uv_pct=Uv_target_pct,
         S_final=S_final,
         S_target=S_target,
-        days_90=days_90
+        days_90=days_90,
+        d_w_mm=d_w_mm,
+        d_e_m=d_e_m,
+        n=n,
+        Fn=Fn,
+        df=df
     )
     
     st.download_button(
-        label="📥 ดาวน์โหลดรายงานสรุปผล (Word File .docx)",
+        label="📥 ดาวน์โหลดรายงานสรุปผลพร้อมตาราง (Word File .docx)",
         data=doc_file,
         file_name=f"PVD_Engineering_Report_S{S}m_{target_day}days.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
