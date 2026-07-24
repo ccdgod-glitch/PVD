@@ -186,7 +186,7 @@ def generate_word_report():
     return bio.getvalue()
 
 # ---------------------------------------------------------
-# 5. DASHBOARD DISPLAY & DOWNLOAD BUTTON
+# 5. DASHBOARD DISPLAY
 # ---------------------------------------------------------
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("เส้นผ่านศูนย์กลางเทียบเท่า (dw)", f"{d_w*1000:.1f} mm")
@@ -198,8 +198,93 @@ m4.metric("เวลาบรรลุ U = 90%", f"{days_90} วัน",
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-tab_charts, tab_data, tab_summary = st.tabs(["📊 กราฟวิเคราะห์ (Interactive Charts)", "📋 ตารางข้อมูล (Data Table)", "💡 สรุปผลการออกแบบ & Export Report"])
+# เพิ่มแท็บ "📐 ขั้นตอนการคำนวณ (Step-by-Step)" ขึ้นมาบนหน้าเว็บ
+tab_steps, tab_charts, tab_data, tab_summary = st.tabs([
+    "📐 ขั้นตอนการคำนวณ (Step-by-Step)", 
+    "📊 กราฟวิเคราะห์ (Interactive Charts)", 
+    "📋 ตารางข้อมูล (Data Table)", 
+    "💡 สรุปผลการออกแบบ"
+])
 
+# =========================================================
+# TAB 1: แสดงขั้นตอนการคำนวณแบบเรียงลำดับลงมา (Step-by-Step)
+# =========================================================
+with tab_steps:
+    st.subheader("📐 ขั้นตอนและสูตรการคำนวณทางวิศวกรรม (Calculation Steps)")
+    
+    # -----------------------------------------------------
+    # STEP 1: เรขาคณิต PVD
+    # -----------------------------------------------------
+    with st.expander("STEP 1: คำนวณขนาดเรขาคณิตของ PVD (Geometric Properties)", expanded=True):
+        st.write("**1.1 เส้นผ่านศูนย์กลางเทียบเท่าของ PVD ($d_w$):**")
+        st.latex(r"d_w = \frac{2(a + b)}{\pi}")
+        st.write(f"➔ $d_w = \\frac{{2({a*1000:.1f} + {b*1000:.1f})}}{{\pi}} = \\mathbf{{{d_w*1000:.2f}\text{{ mm}}}} \quad ({d_w:.4f}\text{{ m}})$")
+        
+        st.write("**1.2 รัศมีอิทธิพลการระบายน้ำ ($d_e$):**")
+        formula_de = r"d_e = 1.05 \times S" if "สามเหลี่ยม" in pattern else r"d_e = 1.13 \times S"
+        st.latex(formula_de)
+        st.write(f"➔ $d_e = \\mathbf{{{d_e:.3f}\text{{ m}}}}$")
+        
+        st.write("**1.3 อัตราส่วนระยะการระบายน้ำ ($n$):**")
+        st.latex(r"n = \frac{d_e}{d_w}")
+        st.write(f"➔ $n = \\frac{{{d_e:.3f}}}{{{d_w:.4f}}} = \\mathbf{{{n:.2f}}}$")
+
+    # -----------------------------------------------------
+    # STEP 2: Smear Effect
+    # -----------------------------------------------------
+    with st.expander("STEP 2: คำนวณผลกระทบดินถูกรบกวน (Smear Effect Factor: $F_n$)", expanded=True):
+        if include_smear:
+            st.write("**คิดผลกระทบ Smear Effect (Hansbo / Barron Theory):**")
+            st.latex(r"F(n)_s = \ln\left(\frac{n}{s}\right) + \left(\frac{k_h}{k_s}\right)\ln(s) - 0.75")
+            st.write(f"โดยกำหนดค่า $s = \\frac{{d_s}}{{d_w}} = {d_s_ratio:.1f}$ และ $\\frac{{k_h}}{{k_s}} = {kh_ks_ratio:.1f}$")
+            st.write(f"➔ $F(n)_s = \ln\left(\\frac{{{n:.2f}}}{{{d_s_ratio:.1f}}}\\right) + ({kh_ks_ratio:.1f})\ln({d_s_ratio:.1f}) - 0.75 = \\mathbf{{{Fn:.4f}}}$")
+        else:
+            st.write("**ไม่คิดผลกระทบ Smear Effect:**")
+            st.latex(r"F(n) = \frac{n^2}{n^2 - 1}\ln(n) - \frac{3n^2 - 1}{4n^2}")
+            st.write(f"➔ $F(n) = \\mathbf{{{Fn:.4f}}}$")
+
+    # -----------------------------------------------------
+    # STEP 3: Settlement Calculation
+    # -----------------------------------------------------
+    with st.expander("STEP 3: คำนวณการทรุดตัวสูงสุดขั้นปฐมภูมิ ($S_{final}$)", expanded=True):
+        st.latex(r"S_{final} = H_{soil} \times \left[ \frac{C_c}{1 + e_0} \right] \times \log_{10}\left( \frac{\sigma'_0 + \Delta\sigma}{\sigma'_0} \right)")
+        st.write(f"➔ $S_{{final}} = {H_soil:.2f} \times \left[ \\frac{{{Cc:.2f}}}{{1 + {e0:.2f}}} \\right] \times \log_{{10}}\left( \\frac{{{sigma_0:.1f} + {delta_sigma:.1f}}}{{{sigma_0:.1f}}} \\right)$")
+        st.write(f"➔ $\\mathbf{{S_{{final}} = {S_final:.4f}\text{{ m}}}} \quad ({S_final*100:.2f}\text{{ cm}})$")
+
+    # -----------------------------------------------------
+    # STEP 4: Time Factor & Combined Consolidation Table
+    # -----------------------------------------------------
+    with st.expander("STEP 4: ตารางคำนวณตามเวลาจริง (Time Factors & Degree of Consolidation)", expanded=True):
+        st.write("คำนวณการอัดตัวคายน้ำรวมด้วยสมการ Carillo (1942): $(1 - U_{av}) = (1 - U_v)(1 - U_r)$")
+        
+        # สร้าง DataFrame แสดงขั้นตอนการคำนวณรายช่วงวันแบบเรียงลงมา
+        sample_days = [10, 30, 60, 90, 120, 150, 180, 240, 300, 365]
+        H_dr = H_soil / 2.0
+        
+        steps_table = []
+        for d in sample_days:
+            t_yr = d / 365.25
+            Tv = (Cv * t_yr) / (H_dr**2)
+            Tr = (Cr * t_yr) / (d_e**2)
+            
+            r = df[df["Day"] == d].iloc[0]
+            steps_table.append({
+                "เวลา (วัน)": d,
+                "Time (ปี)": f"{t_yr:.3f}",
+                "Tv (แนวดิ่ง)": f"{Tv:.4f}",
+                "U_v (%)": f"{r['U_v']:.2f}%",
+                "Tr (แนวรัศมี)": f"{Tr:.4f}",
+                "U_r (%)": f"{r['U_r']:.2f}%",
+                "U_av รวม (%)": f"{r['U_av']:.2f}%",
+                "การทรุดตัว S(t) (m)": f"{r['Settlement']:.3f} m"
+            })
+            
+        df_steps_display = pd.DataFrame(steps_table)
+        st.dataframe(df_steps_display, use_container_width=True)
+
+# ---------------------------------------------------------
+# TAB 2-4: ส่วนอื่นๆ (คงไว้ตามเดิม)
+# ---------------------------------------------------------
 with tab_charts:
     col_left, col_right = st.columns(2)
     with col_left:
