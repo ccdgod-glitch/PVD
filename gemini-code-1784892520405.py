@@ -19,33 +19,41 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* 1. พื้นหลังหลักสีเทาอ่อนสะอาดตา */
+    /* 1. บังคับตัวอักษรทั้งหมดในหน้าเว็บให้เป็นสีเข้ม */
+    html, body, [class*="st-"], .stMarkdown, p, span, label, div {
+        color: #0F172A !important;
+    }
+
+    /* 2. พื้นหลังหลักสีเทาอ่อนสะอาดตา */
     .stApp {
-        background-color: #F8FAFC;
+        background-color: #F8FAFC !important;
     }
     
-    /* 2. Sidebar สีขาวพร้อมเส้นขอบบางๆ */
+    /* 3. Sidebar สีขาว + ตัวหนังสือสีเข้ม */
     [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
+        background-color: #FFFFFF !important;
         border-right: 1px solid #E2E8F0;
     }
+    [data-testid="stSidebar"] * {
+        color: #0F172A !important;
+    }
     
-    /* 3. หัวข้อหลักสีฟ้าสว่างสดใส */
+    /* 4. หัวข้อหลักสีฟ้าสว่าง */
     .main-header { 
         font-size: 2.2rem; 
         font-weight: 800; 
-        color: #0284C7; 
+        color: #0284C7 !important; 
         margin-bottom: 0.2rem; 
     }
     .sub-header { 
         font-size: 1rem; 
-        color: #475569; 
+        color: #475569 !important; 
         margin-bottom: 1.5rem; 
     }
     
-    /* 4. การ์ด Metric สีขาวขอบมน มีเงาบางๆ */
+    /* 5. การ์ด Metric สีขาว + ตัวหนังสือชัดเจน */
     div[data-testid="stMetric"] {
-        background-color: #FFFFFF;
+        background-color: #FFFFFF !important;
         padding: 16px 20px;
         border-radius: 12px;
         border: 1px solid #E2E8F0;
@@ -53,19 +61,26 @@ st.markdown("""
     }
     div[data-testid="stMetricLabel"] > label {
         font-size: 0.95rem;
-        color: #64748B;
+        color: #475569 !important;
         font-weight: 600;
     }
     div[data-testid="stMetricValue"] { 
         font-size: 1.8rem; 
         font-weight: 800; 
-        color: #0F172A;
+        color: #0F172A !important;
     }
     
-    /* 5. แถบ Tabs สีสว่าง */
+    /* 6. ช่องกรอกข้อมูล (Input Boxes) ให้เป็นพื้นขาวตัวหนังสือเข้ม */
+    input, select, textarea {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
+    }
+    
+    /* 7. แถบ Tabs */
     .stTabs [data-baseweb="tab-list"] { 
         gap: 8px; 
-        background-color: #FFFFFF;
+        background-color: #FFFFFF !important;
         padding: 6px;
         border-radius: 12px;
         border: 1px solid #E2E8F0;
