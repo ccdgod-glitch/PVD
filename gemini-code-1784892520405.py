@@ -19,11 +19,62 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    .main-header { font-size: 2.2rem; font-weight: 700; color: #1E3A8A; margin-bottom: 0.2rem; }
-    .sub-header { font-size: 1rem; color: #6B7280; margin-bottom: 1.5rem; }
-    div[data-testid="stMetricValue"] { font-size: 1.8rem; font-weight: bold; }
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] { padding-left: 16px; padding-right: 16px; border-radius: 4px; }
+    /* 1. พื้นหลังหลักสีเทาอ่อนสะอาดตา */
+    .stApp {
+        background-color: #F8FAFC;
+    }
+    
+    /* 2. Sidebar สีขาวพร้อมเส้นขอบบางๆ */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E2E8F0;
+    }
+    
+    /* 3. หัวข้อหลักสีฟ้าสว่างสดใส */
+    .main-header { 
+        font-size: 2.2rem; 
+        font-weight: 800; 
+        color: #0284C7; 
+        margin-bottom: 0.2rem; 
+    }
+    .sub-header { 
+        font-size: 1rem; 
+        color: #475569; 
+        margin-bottom: 1.5rem; 
+    }
+    
+    /* 4. การ์ด Metric สีขาวขอบมน มีเงาบางๆ */
+    div[data-testid="stMetric"] {
+        background-color: #FFFFFF;
+        padding: 16px 20px;
+        border-radius: 12px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    div[data-testid="stMetricLabel"] > label {
+        font-size: 0.95rem;
+        color: #64748B;
+        font-weight: 600;
+    }
+    div[data-testid="stMetricValue"] { 
+        font-size: 1.8rem; 
+        font-weight: 800; 
+        color: #0F172A;
+    }
+    
+    /* 5. แถบ Tabs สีสว่าง */
+    .stTabs [data-baseweb="tab-list"] { 
+        gap: 8px; 
+        background-color: #FFFFFF;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid #E2E8F0;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #E0F2FE !important;
+        color: #0284C7 !important;
+        font-weight: 700;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -432,9 +483,42 @@ with tab_charts:
     col_left, col_right = st.columns(2)
     with col_left:
         fig_settle = go.Figure()
-        fig_settle.add_trace(go.Scatter(x=df["Day"], y=df["Settlement"], mode='lines', name='Settlement (m)', line=dict(color='#EF4444', width=3)))
-        fig_settle.update_layout(title="📉 กราฟพัฒนาการการทรุดตัวตามเวลา", xaxis_title="เวลา (วัน)", yaxis_title="การทรุดตัว (เมตร)", yaxis=dict(autorange="reversed"), template="plotly_white", height=380)
+        # เส้นกราฟสี Rose Red สว่างสดใส
+        fig_settle.add_trace(go.Scatter(x=df["Day"], y=df["Settlement"], mode='lines', name='Settlement (m)', line=dict(color='#F43F5E', width=3.5)))
+        fig_settle.update_layout(
+            title=dict(text="📉 กราฟพัฒนาการการทรุดตัวตามเวลา", font=dict(size=16, color="#0F172A")),
+            xaxis_title="เวลา (วัน)", 
+            yaxis_title="การทรุดตัว (เมตร)", 
+            yaxis=dict(autorange="reversed", gridcolor="#F1F5F9"), 
+            xaxis=dict(gridcolor="#F1F5F9"),
+            template="plotly_white", 
+            height=380,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="#FFFFFF",
+            margin=dict(l=20, r=20, t=50, b=20)
+        )
         st.plotly_chart(fig_settle, use_container_width=True)
+
+    with col_right:
+        fig_u = go.Figure()
+        # เส้นกราฟโทนสว่างตัดกันชัดเจน
+        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_av"], name='รวม (U_av)', line=dict(color='#10B981', width=3.5)))
+        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_r"], name='แนวรัศมี PVD (U_r)', line=dict(color='#0EA5E9', width=2.5, dash='dash')))
+        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_v"], name='แนวดิ่ง ดิน (U_v)', line=dict(color='#8B5CF6', width=2, dash='dot')))
+        fig_u.add_hline(y=90, line_dash="dash", line_color="#F59E0B", annotation_text="Target 90%")
+        fig_u.update_layout(
+            title=dict(text="📊 อัตราการอัดตัวคายน้ำ (Degree of Consolidation)", font=dict(size=16, color="#0F172A")),
+            xaxis_title="เวลา (วัน)", 
+            yaxis_title="Consolidation (%)", 
+            yaxis=dict(range=[0, 105], gridcolor="#F1F5F9"), 
+            xaxis=dict(gridcolor="#F1F5F9"),
+            template="plotly_white", 
+            height=380,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="#FFFFFF",
+            margin=dict(l=20, r=20, t=50, b=20)
+        )
+        st.plotly_chart(fig_u, use_container_width=True)
 
     with col_right:
         fig_u = go.Figure()
