@@ -185,49 +185,81 @@ st.markdown('<div class="main-header">🏗️ PVD Consolidation Analytics</div>'
 st.markdown('<div class="sub-header">ระบบจำลองการทรุดตัวและคำนวณเวลาการอัดตัวคายน้ำชั้นดินอ่อน (ปรับหน่วยตามตำราเรียน / สไลด์เลคเชอร์)</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. SIDEBAR - INPUT PARAMETERS
+# 4. SIDEBAR - INPUT PARAMETERS (ระบบจำค่าอัตโนมัติผ่าน URL)
 # ---------------------------------------------------------
 st.sidebar.title("⚙️ ตั้งค่าพารามิเตอร์การออกแบบ")
 
+# ฟังก์ชันดึงค่าจาก URL หากไม่มีจะใช้ค่าเริ่มต้น (Default)
+def get_param(key, default_type, default_val):
+    val = st.query_params.get(key, default_val)
+    try:
+        if default_type == float: return float(val)
+        if default_type == int: return int(val)
+        if default_type == bool: return str(val).lower() == "true"
+        return str(val)
+    except:
+        return default_val
+
+# ฟังก์ชันอัปเดต URL อัตโนมัติเมื่อมีการเปลี่ยนค่าในปุ่มต่างๆ
+def update_url():
+    for key, val in st.session_state.items():
+        if key.startswith("mem_"):
+            param_name = key.replace("mem_", "")
+            st.query_params[param_name] = str(val)
+
 with st.sidebar.expander("📐 1. รูปแบบ PVD & ระยะติดตั้ง", expanded=True):
-    pattern = st.selectbox("รูปแบบการจัดวาง", ["สามเหลี่ยม (Triangular)", "สี่เหลี่ยม (Square)"])
-    S = st.number_input("ระยะห่างการติดตั้ง S (m)", value=1.00, step=0.05, format="%.2f")
-    H_pvd = st.number_input("ความลึกแผ่น PVD (m)", value=10.0, step=0.5)
-    a_mm = st.number_input("ความกว้าง PVD: a (mm)", value=100.0, step=5.0)
-    b_mm = st.number_input("ความหนา PVD: b (mm)", value=5.0, step=0.5)
+    pattern_options = ["สามเหลี่ยม (Triangular)", "สี่เหลี่ยม (Square)"]
+    def_pat = get_param("pattern", str, pattern_options[0])
+    pattern = st.selectbox("รูปแบบการจัดวาง", pattern_options, 
+                           index=pattern_options.index(def_pat) if def_pat in pattern_options else 0, 
+                           key="mem_pattern", on_change=update_url)
+    
+    S = st.number_input("ระยะห่างการติดตั้ง S (m)", value=get_param("S", float, 1.00), step=0.05, format="%.2f", key="mem_S", on_change=update_url)
+    H_pvd = st.number_input("ความลึกแผ่น PVD (m)", value=get_param("H_pvd", float, 10.0), step=0.5, key="mem_H_pvd", on_change=update_url)
+    a_mm = st.number_input("ความกว้าง PVD: a (mm)", value=get_param("a_mm", float, 100.0), step=5.0, key="mem_a_mm", on_change=update_url)
+    b_mm = st.number_input("ความหนา PVD: b (mm)", value=get_param("b_mm", float, 5.0), step=0.5, key="mem_b_mm", on_change=update_url)
 
 with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิน & ทางระบายน้ำ", expanded=True):
-    H_soil = st.number_input("ความหนาชั้นดินอ่อน: H_soil (m)", value=30.0, step=1.0)
-    drainage_type = st.radio("ลักษณะการระบายน้ำแนวดิ่ง (Drainage Path)", ["ระบายน้ำ 2 ทาง (บน-ล่าง: Hd = H/2)", "ระบายน้ำทางเดียว (Hd = H)"])
+    H_soil = st.number_input("ความหนาชั้นดินอ่อน: H_soil (m)", value=get_param("H_soil", float, 30.0), step=1.0, key="mem_H_soil", on_change=update_url)
+    
+    drain_options = ["ระบายน้ำ 2 ทาง (บน-ล่าง: Hd = H/2)", "ระบายน้ำทางเดียว (Hd = H)"]
+    def_drain = get_param("drainage", str, drain_options[0])
+    drainage_type = st.radio("ลักษณะการระบายน้ำแนวดิ่ง (Drainage Path)", drain_options, 
+                             index=drain_options.index(def_drain) if def_drain in drain_options else 0, 
+                             key="mem_drainage", on_change=update_url)
     
     st.markdown("---")
-    unit_choice = st.selectbox("เลือกหน่วยของ Cv และ Cr", ["cm²/day (ตรงตามสไลด์)", "m²/year"])
+    unit_options = ["cm²/day (ตรงตามสไลด์)", "m²/year"]
+    def_unit = get_param("unit", str, unit_options[0])
+    unit_choice = st.selectbox("เลือกหน่วยของ Cv และ Cr", unit_options, 
+                               index=unit_options.index(def_unit) if def_unit in unit_options else 0, 
+                               key="mem_unit", on_change=update_url)
     
     if "cm²/day" in unit_choice:
-        Cv_input = st.number_input("ค่า Cv (cm²/day)", value=20.0, step=1.0)
-        Cr_input = st.number_input("ค่า Cr (cm²/day)", value=140.0, step=5.0)
+        Cv_input = st.number_input("ค่า Cv (cm²/day)", value=get_param("Cv", float, 20.0), step=1.0, key="mem_Cv", on_change=update_url)
+        Cr_input = st.number_input("ค่า Cr (cm²/day)", value=get_param("Cr", float, 140.0), step=5.0, key="mem_Cr", on_change=update_url)
         Cv_m2_yr = (Cv_input / 10000.0) * 365.25
         Cr_m2_yr = (Cr_input / 10000.0) * 365.25
         Cv_cm2_day = Cv_input
         Cr_cm2_day = Cr_input
     else:
-        Cv_m2_yr = st.number_input("ค่า Cv (m²/year)", value=2.0, step=0.1)
-        Cr_m2_yr = st.number_input("ค่า Cr (m²/year)", value=6.0, step=0.1)
+        Cv_m2_yr = st.number_input("ค่า Cv (m²/year)", value=get_param("Cv", float, 2.0), step=0.1, key="mem_Cv", on_change=update_url)
+        Cr_m2_yr = st.number_input("ค่า Cr (m²/year)", value=get_param("Cr", float, 6.0), step=0.1, key="mem_Cr", on_change=update_url)
         Cv_cm2_day = (Cv_m2_yr / 365.25) * 10000.0
         Cr_cm2_day = (Cr_m2_yr / 365.25) * 10000.0
 
     st.markdown("---")
-    Cc = st.number_input("Compression Index (Cc)", value=0.80, step=0.05)
-    e0 = st.number_input("Initial Void Ratio (e0)", value=2.00, step=0.1)
-    sigma_0 = st.number_input("Effective Stress เดิม: σ0' (kPa)", value=50.0, step=5.0)
-    delta_sigma = st.number_input("น้ำหนักถมเพิ่ม: Δσ (kPa)", value=80.0, step=5.0)
+    Cc = st.number_input("Compression Index (Cc)", value=get_param("Cc", float, 0.80), step=0.05, key="mem_Cc", on_change=update_url)
+    e0 = st.number_input("Initial Void Ratio (e0)", value=get_param("e0", float, 2.00), step=0.1, key="mem_e0", on_change=update_url)
+    sigma_0 = st.number_input("Effective Stress เดิม: σ0' (kPa)", value=get_param("sigma_0", float, 50.0), step=5.0, key="mem_sigma_0", on_change=update_url)
+    delta_sigma = st.number_input("น้ำหนักถมเพิ่ม: Δσ (kPa)", value=get_param("delta_sigma", float, 80.0), step=5.0, key="mem_delta_sigma", on_change=update_url)
 
 with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมาย & Smear Effect", expanded=True):
-    target_day = st.number_input("วันเป้าหมายหลักที่ต้องการตรวจสอบ (วัน)", value=90, step=10, min_value=1)
-    include_smear = st.checkbox("คิดผลกระทบ Smear Effect", value=False)
+    target_day = st.number_input("วันเป้าหมายหลักที่ต้องการตรวจสอบ (วัน)", value=get_param("target_day", int, 90), step=10, min_value=1, key="mem_target_day", on_change=update_url)
+    include_smear = st.checkbox("คิดผลกระทบ Smear Effect", value=get_param("smear", bool, False), key="mem_smear", on_change=update_url)
     if include_smear:
-        d_s_ratio = st.number_input("อัตราส่วน ds / dw", value=2.5, step=0.1)
-        kh_ks_ratio = st.number_input("อัตราส่วน kh / ks", value=3.0, step=0.5)
+        d_s_ratio = st.number_input("อัตราส่วน ds / dw", value=get_param("ds_ratio", float, 2.5), step=0.1, key="mem_ds_ratio", on_change=update_url)
+        kh_ks_ratio = st.number_input("อัตราส่วน kh / ks", value=get_param("kh_ks", float, 3.0), step=0.5, key="mem_kh_ks", on_change=update_url)
     else:
         d_s_ratio, kh_ks_ratio = 1.0, 1.0
 
