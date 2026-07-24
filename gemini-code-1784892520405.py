@@ -19,88 +19,82 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* 1. บังคับตัวอักษรและพื้นหลังหลักทั้งหมดให้เป็นโทนสว่าง */
+    /* 1. บังคับพื้นหลังขาวบริสุทธิ์แบบสไลด์เรียน + ตัวหนังสือดำเข้ม */
     html, body, [class*="st-"], .stMarkdown, p, span, label, div {
-        color: #0F172A !important;
+        color: #111827 !important;
+        font-family: 'Sarabun', 'Segoe UI', sans-serif;
     }
     .stApp {
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
     }
 
-    /* 2. ปรับ Sidebar ให้เป็นสีเทาอ่อน สบายตา */
+    /* 2. Sidebar โทนขาวขอบเทาอ่อน อ่านง่าย */
     [data-testid="stSidebar"] {
-        background-color: #F1F5F9 !important;
-        border-right: 1px solid #E2E8F0 !important;
+        background-color: #F8FAFC !important;
+        border-right: 2px solid #E2E8F0 !important;
     }
     [data-testid="stSidebar"] * {
-        color: #0F172A !important;
+        color: #111827 !important;
     }
 
-    /* 3. แก้ไขกล่องพับแถบข้าง (Expanders) จากเดิมที่เป็นกล่องดำ ให้เป็นสีขาวขอบมน */
+    /* 3. กล่องพับแถบข้าง (Expander) เปลี่ยนเป็นการ์ดขาว ขอบสีฟ้า Cyan */
     div[data-testid="stExpander"] {
         background-color: #FFFFFF !important;
         border: 1px solid #CBD5E1 !important;
         border-radius: 10px !important;
         margin-bottom: 12px !important;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03) !important;
         overflow: hidden;
     }
     div[data-testid="stExpander"] details summary {
-        background-color: #F8FAFC !important;
-        color: #0F172A !important;
-        font-weight: 600 !important;
+        background-color: #F1F5F9 !important;
+        color: #008BAA !important; /* สีฟ้าสไลด์ */
+        font-weight: 700 !important;
         padding: 10px 14px !important;
+        border-bottom: 1px solid #E2E8F0 !important;
     }
     div[data-testid="stExpander"] details summary:hover {
         background-color: #E2E8F0 !important;
     }
 
-    /* 4. แก้ไขช่องเลือก (Selectbox) และช่องกรอกตัวเลข (Input) ให้เป็นพื้นขาว */
+    /* 4. ช่องกรอกข้อมูล (Input) พื้นหลังขาว ขอบเข้ม อ่านตัวเลขชัดเจน */
     div[data-baseweb="select"] > div,
     div[data-baseweb="input"] > div,
     input {
         background-color: #FFFFFF !important;
-        color: #0F172A !important;
-        border-color: #CBD5E1 !important;
+        color: #111827 !important;
+        border: 1.5px solid #94A3B8 !important;
         border-radius: 6px !important;
     }
-    
-    /* แก้ไขปุ่ม + และ - ของช่องกรอกตัวเลข */
     button[data-testid="stNumberInputStepDown"], 
     button[data-testid="stNumberInputStepUp"] {
         background-color: #F1F5F9 !important;
-        color: #0F172A !important;
+        color: #111827 !important;
         border: 1px solid #CBD5E1 !important;
     }
-    button[data-testid="stNumberInputStepDown"]:hover, 
-    button[data-testid="stNumberInputStepUp"]:hover {
-        background-color: #E2E8F0 !important;
-    }
 
-    /* 5. ปรับแต่งตารางคำนวณให้อ่านง่าย มีหัวตารางสีเทาอ่อน */
+    /* 5. ตารางคำนวณสไตล์เอกสารวิชาการ (หัวตารางสีเทาอ่อน ตัวหนังสือดำ) */
     div[data-testid="stTable"] table {
         background-color: #FFFFFF !important;
-        color: #0F172A !important;
-        border: 1px solid #E2E8F0 !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 8px !important;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
     }
     div[data-testid="stTable"] th {
         background-color: #F1F5F9 !important;
         color: #0F172A !important;
         font-weight: 700 !important;
-        border-bottom: 2px solid #CBD5E1 !important;
+        border-bottom: 2px solid #008BAA !important; /* เส้นใต้หัวตารางสีฟ้า PVD */
     }
     div[data-testid="stTable"] td {
-        color: #1E293B !important;
-        border-bottom: 1px solid #F1F5F9 !important;
+        color: #111827 !important;
+        border-bottom: 1px solid #E2E8F0 !important;
     }
 
-    /* 6. ตกแต่งหัวข้อหลักและ Metric Cards */
+    /* 6. หัวข้อหลัก & กล่องสรุปผล (Metric Cards) */
     .main-header { 
         font-size: 2.2rem; 
         font-weight: 800; 
-        color: #0284C7 !important; 
+        color: #008BAA !important; /* สีฟ้าแผ่น PVD */
         margin-bottom: 0.2rem; 
     }
     .sub-header { 
@@ -110,10 +104,35 @@ st.markdown("""
     }
     div[data-testid="stMetric"] {
         background-color: #FFFFFF !important;
-        padding: 16px 20px;
-        border-radius: 12px;
+        border-left: 5px solid #FF5964 !important; /* เส้นขอบข้างสีแดงแบบวงกลมเลข 3 */
+        border-top: 1px solid #E2E8F0 !important;
+        border-right: 1px solid #E2E8F0 !important;
+        border-bottom: 1px solid #E2E8F0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.04) !important;
+    }
+    div[data-testid="stMetricLabel"] > label {
+        color: #475569 !important;
+        font-weight: 600 !important;
+    }
+    div[data-testid="stMetricValue"] { 
+        color: #111827 !important;
+        font-weight: 800 !important;
+    }
+
+    /* 7. แถบ Tabs */
+    .stTabs [data-baseweb="tab-list"] { 
+        gap: 8px; 
+        background-color: #F8FAFC !important;
+        padding: 6px;
+        border-radius: 8px;
         border: 1px solid #E2E8F0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #FFFFFF !important;
+        color: #008BAA !important;
+        border-bottom: 3px solid #008BAA !important;
+        font-weight: 700 !important;
     }
 </style>
 """, unsafe_allow_html=True)
