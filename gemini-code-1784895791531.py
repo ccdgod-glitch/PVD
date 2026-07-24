@@ -271,7 +271,7 @@ with tab_steps:
         else:
             ur_p = (1 - np.exp((-8 * (Cr_cm2_day * d_val) / de2_cm2) / Fn)) * 100
             tv_tmp = (Cv_cm2_day * d_val) / (H_d_cm**2)
-            uv_tmp = np.sqrt((4 * tv_tmp) / np.pi) if tv_tmp <= 0.286 else 1 - (10**(-0.085 - 0.933 * tv_tmp))
+            uv_tmp = np.sqrt(4 * tv_tmp) / np.pi if tv_tmp <= 0.286 else 1 - (10**(-0.085 - 0.933 * tv_tmp))
             uv_p = min(uv_tmp * 100, 100)
             uav_p = 100 * (1 - (1 - ur_p/100) * (1 - uv_p/100))
             
