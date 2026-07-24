@@ -19,131 +19,11 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* 1. ปรับพื้นหลังหลัก หัวข้อ และตัวหนังสือทุกประเภทบนหน้าเว็บ */
-    html, body, [class*="st-"], .stMarkdown, p, span, label, div, h1, h2, h3, h4, h5, h6 {
-        color: #111827 !important;
-        font-family: 'Sarabun', 'Segoe UI', sans-serif !important;
-    }
-    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        background-color: #FFFFFF !important;
-    }
-
-    /* 2. แถบเมนูด้านข้าง (Sidebar) */
-    [data-testid="stSidebar"], [data-testid="stSidebar"] > div {
-        background-color: #F8FAFC !important;
-        border-right: 2px solid #E2E8F0 !important;
-    }
-
-    /* 3. ปุ่มกดทั้งหมด (เช่น ปุ่มดาวน์โหลด CSV / Word) ให้เป็นสีฟ้า PVD เด่นชัด */
-    button[kind="primary"], button[kind="secondary"], .stButton > button, .stDownloadButton > button {
-        background-color: #008BAA !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        padding: 8px 16px !important;
-        transition: all 0.2s ease !important;
-    }
-    button[kind="primary"]:hover, button[kind="secondary"]:hover, .stButton > button:hover, .stDownloadButton > button:hover {
-        background-color: #006B83 !important;
-        box-shadow: 0 4px 10px rgba(0, 139, 170, 0.25) !important;
-    }
-
-    /* 4. ตัวเลือก Radio และ Checkbox */
-    [data-testid="stRadioButton"] label, [data-testid="stCheckbox"] label {
-        color: #111827 !important;
-        font-weight: 500 !important;
-    }
-
-    /* 5. กล่องแจ้งเตือน (st.info, st.success, st.warning) ให้เป็นสีสว่าง อ่านง่าย */
-    div[data-testid="stAlertContainer"] {
-        background-color: #F8FAFC !important;
-        border-radius: 8px !important;
-        border: 1px solid #CBD5E1 !important;
-    }
-    div[data-testid="stAlertContainer"] * {
-        color: #111827 !important;
-    }
-
-    /* 6. สมการคณิตศาสตร์ (LaTeX / KaTeX) ตัวหนังสือสีดำเข้ม */
-    .katex, .katex-display, .katex * {
-        color: #111827 !important;
-    }
-
-    /* 7. ช่องกรอกข้อมูล (Selectbox, Input, NumberInput) */
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="input"] > div,
-    input, select, textarea {
-        background-color: #FFFFFF !important;
-        color: #111827 !important;
-        border: 1.5px solid #94A3B8 !important;
-        border-radius: 6px !important;
-    }
-    button[data-testid="stNumberInputStepDown"], 
-    button[data-testid="stNumberInputStepUp"] {
-        background-color: #F1F5F9 !important;
-        color: #111827 !important;
-        border: 1px solid #CBD5E1 !important;
-    }
-
-    /* 8. ตารางข้อมูล (ทั้ง st.table และ st.dataframe) */
-    div[data-testid="stTable"] table, [data-testid="stDataFrame"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 8px !important;
-    }
-    div[data-testid="stTable"] th {
-        background-color: #F1F5F9 !important;
-        color: #0F172A !important;
-        font-weight: 700 !important;
-        border-bottom: 2px solid #008BAA !important;
-    }
-    div[data-testid="stTable"] td {
-        color: #111827 !important;
-        border-bottom: 1px solid #E2E8F0 !important;
-    }
-
-    /* 9. การ์ดตัวเลขสรุป (Metric Cards) แถบแดงสไลด์ */
-    div[data-testid="stMetric"] {
-        background-color: #FFFFFF !important;
-        border-left: 5px solid #FF5964 !important;
-        border-top: 1px solid #E2E8F0 !important;
-        border-right: 1px solid #E2E8F0 !important;
-        border-bottom: 1px solid #E2E8F0 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.04) !important;
-    }
-    div[data-testid="stMetricLabel"] > label {
-        color: #475569 !important;
-        font-weight: 600 !important;
-    }
-    div[data-testid="stMetricValue"] { 
-        color: #111827 !important;
-        font-weight: 800 !important;
-    }
-
-    /* 10. กล่องพับ (Expander) และแท็บ (Tabs) */
-    div[data-testid="stExpander"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 10px !important;
-        margin-bottom: 12px !important;
-    }
-    div[data-testid="stExpander"] details summary {
-        background-color: #F1F5F9 !important;
-        color: #008BAA !important;
-        font-weight: 700 !important;
-    }
-    .stTabs [data-baseweb="tab-list"] { 
-        background-color: #F8FAFC !important;
-        border: 1px solid #E2E8F0 !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #FFFFFF !important;
-        color: #008BAA !important;
-        border-bottom: 3px solid #008BAA !important;
-        font-weight: 700 !important;
-    }
+    .main-header { font-size: 2.2rem; font-weight: 700; color: #1E3A8A; margin-bottom: 0.2rem; }
+    .sub-header { font-size: 1rem; color: #6B7280; margin-bottom: 1.5rem; }
+    div[data-testid="stMetricValue"] { font-size: 1.8rem; font-weight: bold; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+    .stTabs [data-baseweb="tab"] { padding-left: 16px; padding-right: 16px; border-radius: 4px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -552,42 +432,9 @@ with tab_charts:
     col_left, col_right = st.columns(2)
     with col_left:
         fig_settle = go.Figure()
-        # เส้นกราฟสี Rose Red สว่างสดใส
-        fig_settle.add_trace(go.Scatter(x=df["Day"], y=df["Settlement"], mode='lines', name='Settlement (m)', line=dict(color='#F43F5E', width=3.5)))
-        fig_settle.update_layout(
-            title=dict(text="📉 กราฟพัฒนาการการทรุดตัวตามเวลา", font=dict(size=16, color="#0F172A")),
-            xaxis_title="เวลา (วัน)", 
-            yaxis_title="การทรุดตัว (เมตร)", 
-            yaxis=dict(autorange="reversed", gridcolor="#F1F5F9"), 
-            xaxis=dict(gridcolor="#F1F5F9"),
-            template="plotly_white", 
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="#FFFFFF",
-            margin=dict(l=20, r=20, t=50, b=20)
-        )
+        fig_settle.add_trace(go.Scatter(x=df["Day"], y=df["Settlement"], mode='lines', name='Settlement (m)', line=dict(color='#EF4444', width=3)))
+        fig_settle.update_layout(title="📉 กราฟพัฒนาการการทรุดตัวตามเวลา", xaxis_title="เวลา (วัน)", yaxis_title="การทรุดตัว (เมตร)", yaxis=dict(autorange="reversed"), template="plotly_white", height=380)
         st.plotly_chart(fig_settle, use_container_width=True)
-
-    with col_right:
-        fig_u = go.Figure()
-        # เส้นกราฟโทนสว่างตัดกันชัดเจน
-        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_av"], name='รวม (U_av)', line=dict(color='#10B981', width=3.5)))
-        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_r"], name='แนวรัศมี PVD (U_r)', line=dict(color='#0EA5E9', width=2.5, dash='dash')))
-        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_v"], name='แนวดิ่ง ดิน (U_v)', line=dict(color='#8B5CF6', width=2, dash='dot')))
-        fig_u.add_hline(y=90, line_dash="dash", line_color="#F59E0B", annotation_text="Target 90%")
-        fig_u.update_layout(
-            title=dict(text="📊 อัตราการอัดตัวคายน้ำ (Degree of Consolidation)", font=dict(size=16, color="#0F172A")),
-            xaxis_title="เวลา (วัน)", 
-            yaxis_title="Consolidation (%)", 
-            yaxis=dict(range=[0, 105], gridcolor="#F1F5F9"), 
-            xaxis=dict(gridcolor="#F1F5F9"),
-            template="plotly_white", 
-            height=380,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="#FFFFFF",
-            margin=dict(l=20, r=20, t=50, b=20)
-        )
-        st.plotly_chart(fig_u, use_container_width=True)
 
     with col_right:
         fig_u = go.Figure()
