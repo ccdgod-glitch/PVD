@@ -114,7 +114,7 @@ U_v_list, U_r_list, U_av_list, S_t_list = [], [], [], []
 
 for t_yr, d_day in zip(times_years, days):
     Tv = (Cv_cm2_day * d_day) / (H_d_cm**2)
-   U_v = np.sqrt(4 * Tv) / np.pi if Tv <= 0.286 else 1 - (10**(-0.085 - 0.933 * Tv))
+    U_v = np.sqrt(4 * Tv) / np.pi if Tv <= 0.286 else 1 - (10**(-0.085 - 0.933 * Tv))
     U_v = min(U_v, 1.0)
     
     Tr = (Cr_cm2_day * d_day) / (d_e_cm**2)
