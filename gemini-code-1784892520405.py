@@ -19,48 +19,61 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* 1. บังคับพื้นหลังขาวบริสุทธิ์แบบสไลด์เรียน + ตัวหนังสือดำเข้ม */
-    html, body, [class*="st-"], .stMarkdown, p, span, label, div {
+    /* 1. ปรับพื้นหลังหลัก หัวข้อ และตัวหนังสือทุกประเภทบนหน้าเว็บ */
+    html, body, [class*="st-"], .stMarkdown, p, span, label, div, h1, h2, h3, h4, h5, h6 {
         color: #111827 !important;
-        font-family: 'Sarabun', 'Segoe UI', sans-serif;
+        font-family: 'Sarabun', 'Segoe UI', sans-serif !important;
     }
-    .stApp {
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         background-color: #FFFFFF !important;
     }
 
-    /* 2. Sidebar โทนขาวขอบเทาอ่อน อ่านง่าย */
-    [data-testid="stSidebar"] {
+    /* 2. แถบเมนูด้านข้าง (Sidebar) */
+    [data-testid="stSidebar"], [data-testid="stSidebar"] > div {
         background-color: #F8FAFC !important;
         border-right: 2px solid #E2E8F0 !important;
     }
-    [data-testid="stSidebar"] * {
+
+    /* 3. ปุ่มกดทั้งหมด (เช่น ปุ่มดาวน์โหลด CSV / Word) ให้เป็นสีฟ้า PVD เด่นชัด */
+    button[kind="primary"], button[kind="secondary"], .stButton > button, .stDownloadButton > button {
+        background-color: #008BAA !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        padding: 8px 16px !important;
+        transition: all 0.2s ease !important;
+    }
+    button[kind="primary"]:hover, button[kind="secondary"]:hover, .stButton > button:hover, .stDownloadButton > button:hover {
+        background-color: #006B83 !important;
+        box-shadow: 0 4px 10px rgba(0, 139, 170, 0.25) !important;
+    }
+
+    /* 4. ตัวเลือก Radio และ Checkbox */
+    [data-testid="stRadioButton"] label, [data-testid="stCheckbox"] label {
+        color: #111827 !important;
+        font-weight: 500 !important;
+    }
+
+    /* 5. กล่องแจ้งเตือน (st.info, st.success, st.warning) ให้เป็นสีสว่าง อ่านง่าย */
+    div[data-testid="stAlertContainer"] {
+        background-color: #F8FAFC !important;
+        border-radius: 8px !important;
+        border: 1px solid #CBD5E1 !important;
+    }
+    div[data-testid="stAlertContainer"] * {
         color: #111827 !important;
     }
 
-    /* 3. กล่องพับแถบข้าง (Expander) เปลี่ยนเป็นการ์ดขาว ขอบสีฟ้า Cyan */
-    div[data-testid="stExpander"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 10px !important;
-        margin-bottom: 12px !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03) !important;
-        overflow: hidden;
-    }
-    div[data-testid="stExpander"] details summary {
-        background-color: #F1F5F9 !important;
-        color: #008BAA !important; /* สีฟ้าสไลด์ */
-        font-weight: 700 !important;
-        padding: 10px 14px !important;
-        border-bottom: 1px solid #E2E8F0 !important;
-    }
-    div[data-testid="stExpander"] details summary:hover {
-        background-color: #E2E8F0 !important;
+    /* 6. สมการคณิตศาสตร์ (LaTeX / KaTeX) ตัวหนังสือสีดำเข้ม */
+    .katex, .katex-display, .katex * {
+        color: #111827 !important;
     }
 
-    /* 4. ช่องกรอกข้อมูล (Input) พื้นหลังขาว ขอบเข้ม อ่านตัวเลขชัดเจน */
+    /* 7. ช่องกรอกข้อมูล (Selectbox, Input, NumberInput) */
     div[data-baseweb="select"] > div,
     div[data-baseweb="input"] > div,
-    input {
+    input, select, textarea {
         background-color: #FFFFFF !important;
         color: #111827 !important;
         border: 1.5px solid #94A3B8 !important;
@@ -73,8 +86,8 @@ st.markdown("""
         border: 1px solid #CBD5E1 !important;
     }
 
-    /* 5. ตารางคำนวณสไตล์เอกสารวิชาการ (หัวตารางสีเทาอ่อน ตัวหนังสือดำ) */
-    div[data-testid="stTable"] table {
+    /* 8. ตารางข้อมูล (ทั้ง st.table และ st.dataframe) */
+    div[data-testid="stTable"] table, [data-testid="stDataFrame"] {
         background-color: #FFFFFF !important;
         border: 1px solid #CBD5E1 !important;
         border-radius: 8px !important;
@@ -83,28 +96,17 @@ st.markdown("""
         background-color: #F1F5F9 !important;
         color: #0F172A !important;
         font-weight: 700 !important;
-        border-bottom: 2px solid #008BAA !important; /* เส้นใต้หัวตารางสีฟ้า PVD */
+        border-bottom: 2px solid #008BAA !important;
     }
     div[data-testid="stTable"] td {
         color: #111827 !important;
         border-bottom: 1px solid #E2E8F0 !important;
     }
 
-    /* 6. หัวข้อหลัก & กล่องสรุปผล (Metric Cards) */
-    .main-header { 
-        font-size: 2.2rem; 
-        font-weight: 800; 
-        color: #008BAA !important; /* สีฟ้าแผ่น PVD */
-        margin-bottom: 0.2rem; 
-    }
-    .sub-header { 
-        font-size: 1rem; 
-        color: #475569 !important; 
-        margin-bottom: 1.5rem; 
-    }
+    /* 9. การ์ดตัวเลขสรุป (Metric Cards) แถบแดงสไลด์ */
     div[data-testid="stMetric"] {
         background-color: #FFFFFF !important;
-        border-left: 5px solid #FF5964 !important; /* เส้นขอบข้างสีแดงแบบวงกลมเลข 3 */
+        border-left: 5px solid #FF5964 !important;
         border-top: 1px solid #E2E8F0 !important;
         border-right: 1px solid #E2E8F0 !important;
         border-bottom: 1px solid #E2E8F0 !important;
@@ -120,13 +122,21 @@ st.markdown("""
         font-weight: 800 !important;
     }
 
-    /* 7. แถบ Tabs */
+    /* 10. กล่องพับ (Expander) และแท็บ (Tabs) */
+    div[data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 10px !important;
+        margin-bottom: 12px !important;
+    }
+    div[data-testid="stExpander"] details summary {
+        background-color: #F1F5F9 !important;
+        color: #008BAA !important;
+        font-weight: 700 !important;
+    }
     .stTabs [data-baseweb="tab-list"] { 
-        gap: 8px; 
         background-color: #F8FAFC !important;
-        padding: 6px;
-        border-radius: 8px;
-        border: 1px solid #E2E8F0;
+        border: 1px solid #E2E8F0 !important;
     }
     .stTabs [aria-selected="true"] {
         background-color: #FFFFFF !important;
