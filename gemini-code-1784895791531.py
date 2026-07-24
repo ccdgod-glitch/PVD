@@ -43,7 +43,7 @@ with st.sidebar.expander("📐 1. รูปแบบ PVD & ระยะติด
     S = st.number_input("ระยะห่างการติดตั้ง S (m)", value=1.00, step=0.05, format="%.2f")
     H_pvd = st.number_input("ความลึกแผ่น PVD (m)", value=10.0, step=0.5)
     a_mm = st.number_input("ความกว้าง PVD: a (mm)", value=100.0, step=5.0)
-    b_mm = st.number_input("ความหนา PVD: b (mm)", value=4.0, step=0.5)
+b_mm = st.number_input("ความหนา PVD: b (mm)", value=5.0, step=0.5)  # <--- เปลี่ยน value เป็น 5.0
 
 with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิน & ทางระบายน้ำ", expanded=True):
     H_soil = st.number_input("ความหนาชั้นดินอ่อน: H_soil (m)", value=30.0, step=1.0)
@@ -86,7 +86,8 @@ with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมา�
 # 4. CALCULATION ENGINE (คำนวณค่าเรขาคณิตและหน่วยต่างๆ)
 # ---------------------------------------------------------
 a_m, b_m = a_mm / 1000.0, b_mm / 1000.0
-d_w_m = (2 * (a_m + b_m)) / np.pi
+# เปลี่ยนจากเดิม: d_w_m = (2 * (a_m + b_m)) / np.pi
+d_w_m = (a_m + b_m) / 2.0  # <--- ใช้สูตร (a+b)/2 ตรงตามตำราเรียนของสไลด์นี้
 d_w_cm = d_w_m * 100.0
 d_w_mm = d_w_m * 1000.0
 
