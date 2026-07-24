@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 import io
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # ---------------------------------------------------------
 # 1. PAGE CONFIGURATION & CUSTOM CSS
@@ -28,19 +27,20 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. HELPER FUNCTION: สร้างไฟล์ WORD สรุปรายงานเชิงวิศวกรรม
+# 2. HELPER FUNCTION: สรุปผลเป็นคำพูดใน WORD REPORT
 # ---------------------------------------------------------
 def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct, Ur_pct, Uv_pct, S_final, S_target, days_90):
     doc = Document()
     
     # 1. หัวข้อรายงาน
     title = doc.add_heading('รายงานสรุปผลการวิเคราะห์การเร่งการทรุดตัวด้วย PVD', level=1)
-    title.runs[0].font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)  # <--- แก้เป็นแบบนี้
+    if title.runs:
+        title.runs[0].font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)
     
     doc.add_paragraph(f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y')}")
     doc.add_paragraph("-" * 55)
     
-    # 2. หมวดพารามิเตอร์
+    # 2. ข้อมูลพารามิเตอร์
     doc.add_heading('1. ข้อมูลและพารามิเตอร์การออกแบบ (Input Parameters)', level=2)
     p1 = doc.add_paragraph()
     p1.add_run("จากการประเมินพื้นที่โครงการ ซึ่งมีชั้นดินอ่อนความหนา ")
@@ -51,7 +51,7 @@ def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct,
     p1.add_run(f"{S:.2f} เมตร ").bold = True
     p1.add_run(f"กำหนดค่าสัมประสิทธิ์การอัดตัวคายน้ำ Cv = {Cv:.1f} cm²/day และ Cr = {Cr:.1f} cm²/day")
 
-    # 3. หมวดผลการคำนวณ
+    # 3. ผลการคำนวณ
     doc.add_heading('2. ผลการวิเคราะห์และคำนวณ ณ เวลาเป้าหมาย', level=2)
     status_text = "บรรลุตามข้อกำหนดการออกแบบ (>= 90%)" if Uav_pct >= 90 else "ยังไม่บรรลุตามเป้าหมาย (< 90%)"
     
@@ -64,7 +64,7 @@ def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct,
     p2.add_run(f"  • อัตราการอัดตัวคายน้ำเฉลี่ยรวม (Uav): {Uav_pct:.2f}% [{status_text}]\n")
     p2.add_run(f"  • ปริมาณการทรุดตัวที่เกิดขึ้นแล้ว (St): {S_target:.3f} เมตร (จากค่าการทรุดตัวสูงสุด Sfinal = {S_final:.3f} เมตร)")
 
-    # 4. บทสรุปและข้อเสนอแนะเชิงวิศวกรรม (ข้อความปรับเปลี่ยนตามผลลัพธ์อัตโนมัติ)
+    # 4. บทสรุปเชิงวิศวกรรม
     doc.add_heading('3. สรุปผลและข้อเสนอแนะเชิงวิศวกรรม', level=2)
     p3 = doc.add_paragraph()
     
@@ -88,11 +88,14 @@ def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct,
     return buffer
 
 # ---------------------------------------------------------
-# 3. HEADER & SIDEBAR INPUTS
+# 3. HEADER
 # ---------------------------------------------------------
 st.markdown('<div class="main-header">🏗️ PVD Consolidation Analytics</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">ระบบจำลองการทรุดตัวและคำนวณเวลาการอัดตัวคายน้ำชั้นดินอ่อน (พร้อมระบบออกรายงาน Word)</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">ระบบจำลองการทรุดตัวและคำนวณเวลาการอัดตัวคายน้ำชั้นดินอ่อน (ปรับหน่วยตามตำราเรียน / สไลด์เลคเชอร์)</div>', unsafe_allow_html=True)
 
+# ---------------------------------------------------------
+# 4. SIDEBAR - INPUT PARAMETERS
+# ---------------------------------------------------------
 st.sidebar.title("⚙️ ตั้งค่าพารามิเตอร์การออกแบบ")
 
 with st.sidebar.expander("📐 1. รูปแบบ PVD & ระยะติดตั้ง", expanded=True):
@@ -112,7 +115,10 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
     if "cm²/day" in unit_choice:
         Cv_input = st.number_input("ค่า Cv (cm²/day)", value=20.0, step=1.0)
         Cr_input = st.number_input("ค่า Cr (cm²/day)", value=140.0, step=5.0)
-        Cv_cm2_day, Cr_cm2_day = Cv_input, Cr_input
+        Cv_m2_yr = (Cv_input / 10000.0) * 365.25
+        Cr_m2_yr = (Cr_input / 10000.0) * 365.25
+        Cv_cm2_day = Cv_input
+        Cr_cm2_day = Cr_input
     else:
         Cv_m2_yr = st.number_input("ค่า Cv (m²/year)", value=2.0, step=0.1)
         Cr_m2_yr = st.number_input("ค่า Cr (m²/year)", value=6.0, step=0.1)
@@ -135,14 +141,16 @@ with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมา�
         d_s_ratio, kh_ks_ratio = 1.0, 1.0
 
 # ---------------------------------------------------------
-# 4. CALCULATION ENGINE
+# 5. CALCULATION ENGINE
 # ---------------------------------------------------------
 a_m, b_m = a_mm / 1000.0, b_mm / 1000.0
-d_w_m = (a_m + b_m) / 2.0
-d_w_cm, d_w_mm = d_w_m * 100.0, d_w_m * 1000.0
+d_w_m = (a_m + b_m) / 2.0  # สูตร (a+b)/2 ตรงตามสไลด์
+d_w_cm = d_w_m * 100.0
+d_w_mm = d_w_m * 1000.0
 
 d_e_m = 1.05 * S if "สามเหลี่ยม" in pattern else 1.13 * S
 d_e_cm = d_e_m * 100.0
+
 n = d_e_m / d_w_m
 
 if include_smear:
@@ -183,7 +191,7 @@ u90_idx = df[df["U_av"] >= 90].first_valid_index()
 days_90 = df.loc[u90_idx, "Day"] if u90_idx is not None else "> 365"
 
 # ---------------------------------------------------------
-# 5. DASHBOARD DISPLAY & TABS
+# 6. DASHBOARD DISPLAY
 # ---------------------------------------------------------
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("เส้นผ่านศูนย์กลางเทียบเท่า (dw)", f"{d_w_mm:.1f} mm ({d_w_cm:.2f} cm)")
@@ -202,112 +210,171 @@ tab_steps, tab_charts, tab_data, tab_summary = st.tabs([
     "💡 สรุปผลการออกแบบ & Export Report"
 ])
 
-# TAB 1: Step-by-Step Table
+# =========================================================
+# TAB 1: ตารางแสดงวิธีทำทีละขั้นตอน
+# =========================================================
 with tab_steps:
     st.markdown(f"### 📑 ตารางคำนวณและตรวจสอบที่ระยะ $S = {S:.2f}$ m ณ เวลา $t = {target_day}$ วัน")
+    st.caption("จำลองวิธีคิดเลขทีละคอลัมน์ ถอดแบบจากสไลด์เลคเชอร์และตำราปฐพีวิศวกรรม")
     
-    # STEP 5
+    # STEP 5: F(n)
     st.markdown("---")
     st.markdown("#### ⑤ ตารางคำนวณเพื่อหาค่า Drain Spacing Factor: $F(n)$")
+    
     s_test_list = [round(max(0.5, S - 0.1), 2), round(S, 2), round(S + 0.1, 2)]
     fn_rows = []
+    
     for s_val in s_test_list:
-        de_val_cm = (1.05 if "สามเหลี่ยม" in pattern else 1.13) * s_val * 100.0
+        de_val_m = 1.05 * s_val if "สามเหลี่ยม" in pattern else 1.13 * s_val
+        de_val_cm = de_val_m * 100.0
         n_val = de_val_cm / d_w_cm
         n2 = n_val**2
-        t1, t2, t3 = n2 / (n2 - 1), np.log(n_val), (3 * n2 - 1) / (4 * n2)
+        t1 = n2 / (n2 - 1)
+        t2 = np.log(n_val)
+        t3 = (3 * n2 - 1) / (4 * n2)
         fn_val = (t1 * t2) - t3
+        
         fn_rows.append({
-            "(1) S (m)": f"{s_val:.2f}", "(2) de (cm)": f"{de_val_cm:.1f}", "(3) n = de/dw": f"{n_val:.2f}",
-            "(4) n²": f"{n2:.2f}", "(5) n²/(n²-1)": f"{t1:.3f}", "(6) ln(n)": f"{t2:.3f}",
-            "(7) (3n²-1)/(4n²)": f"{t3:.3f}", "(8) F(n)": f"★ {fn_val:.3f}" if s_val == S else f"{fn_val:.3f}"
+            "(1) S (m)": f"{s_val:.2f}",
+            "(2) de (cm)": f"{de_val_cm:.1f}",
+            "(3) n = de/dw": f"{n_val:.2f}",
+            "(4) n²": f"{n2:.2f}",
+            "(5) n²/(n²-1)": f"{t1:.3f}",
+            "(6) ln(n)": f"{t2:.3f}",
+            "(7) (3n²-1)/(4n²)": f"{t3:.3f}",
+            "(8) F(n) = (5)×(6)-(7)": f"★ {fn_val:.3f}" if s_val == S else f"{fn_val:.3f}"
         })
     st.table(pd.DataFrame(fn_rows))
+    st.info(f"💡 **ผลลัพธ์ข้อ ⑤:** ที่ระยะติดตั้ง $S = {S:.2f}$ m คำนวณค่าอัตราส่วน $n = {n:.2f}$ ได้ค่า **$F(n) = {Fn:.3f}$**")
 
-    # STEP 6
+    # STEP 6: Ur
     st.markdown("---")
     st.markdown("#### ⑥ ตารางคำนวณเพื่อหาค่า Degree of Consolidation ในแนวรัศมี ($U_r$)")
+    
     de2_cm2 = d_e_cm**2
+    test_days = sorted(list(set([30, 60, target_day, 180])))
     ur_rows = []
-    for d_val in sorted(list(set([30, 60, target_day, 180]))):
+    
+    for d_val in test_days:
         cr_t = Cr_cm2_day * d_val
         Tr_val = cr_t / de2_cm2
         exp_term = np.exp((-8 * Tr_val) / Fn)
         ur_val = (1 - exp_term) * 100.0
+        
         ur_rows.append({
-            "(1) S (m)": f"{S:.2f}", "(2) Cr (cm²/day)": f"{Cr_cm2_day:.1f}", "(3) t (day)": f"{d_val}",
-            "(4) de² (cm²)": f"{de2_cm2:.0f}", "(5) Cr × t (cm²)": f"{cr_t:.0f}", "(6) Tr": f"{Tr_val:.4f}",
-            "(7) F(n)": f"{Fn:.3f}", "(8) exp(-8Tr/Fn)": f"{exp_term:.4f}", "(9) Ur (%)": f"★ {ur_val:.2f}%" if d_val == target_day else f"{ur_val:.2f}%"
+            "(1) S (m)": f"{S:.2f}",
+            "(2) Cr (cm²/day)": f"{Cr_cm2_day:.1f}",
+            "(3) t (day)": f"{d_val}",
+            "(4) de² (cm²)": f"{de2_cm2:.0f}",
+            "(5) Cr × t (cm²)": f"{cr_t:.0f}",
+            "(6) Tr = (5)/(4)": f"{Tr_val:.4f}",
+            "(7) F(n)": f"{Fn:.3f}",
+            "(8) exp(-8Tr/Fn)": f"{exp_term:.4f}",
+            "(9) Ur (%) = 1 - (8)": f"★ {ur_val:.2f}%" if d_val == target_day else f"{ur_val:.2f}%"
         })
     st.table(pd.DataFrame(ur_rows))
     
     Ur_target = df.loc[df["Day"] == target_day, "U_r"].values[0] if target_day <= 365 else (1 - np.exp((-8 * (Cr_cm2_day * target_day) / de2_cm2) / Fn)) * 100
 
-    # STEP 7
+    # STEP 7: Uv
     st.markdown("---")
-    st.markdown(f"#### ⑦ คำนวณระดับการอัดตัวคายน้ำในแนวดิ่ง ($U_v$) ที่เวลา $t = {target_day}$ วัน")
+    st.markdown(f"#### ⑦ คำนวณระดับการอัดตัวคายน้ำในแนวดิ่ง ($U_v$) ที่เวลา $t = {target_day}$ วัน (Theory of Terzaghi)")
+    
     col_v1, col_v2 = st.columns([1, 1.5])
     with col_v1:
         st.latex(r"T_v = \frac{C_v \times t}{(H_d)^2}")
         st.latex(r"U_v = \frac{\sqrt{4 \times T_v}}{\pi} \quad (\text{เมื่อ } U_v \le 60\%)")
+        st.latex(r"U_v = 1 - 10^{-0.085 - 0.933 T_v} \quad (\text{เมื่อ } U_v > 60\%)")
+        
     with col_v2:
         Tv_target = (Cv_cm2_day * target_day) / (H_d_cm**2)
         Uv_target = np.sqrt(4 * Tv_target) / np.pi if Tv_target <= 0.286 else 1 - (10**(-0.085 - 0.933 * Tv_target))
         Uv_target_pct = min(Uv_target * 100.0, 100.0)
+        
+        st.write(f"**แสดงการแทนค่าตัวเลข ณ เวลาเป้าหมาย $t = {target_day}$ วัน:**")
         st.write(f"- ค่าสัมประสิทธิ์การอัดตัว $C_v = \\mathbf{{{Cv_cm2_day:.1f}}}$ cm²/day")
-        st.write(f"- ระยะระบายน้ำ $H_d = \\mathbf{{{H_d_cm:.0f}}}$ cm ({drainage_type.split(' ')[0]})")
-        st.write(f"- ค่า Time Factor: $T_v = \\mathbf{{{Tv_target:.4f}}}$")
-        st.write(f"- **ผลลัพธ์ $U_v$:** $\\mathbf{{{Uv_target_pct:.2f}\\%}}$")
+        st.write(f"- ความหนาชั้นดิน $H = {H_soil}$ m ➔ ระยะระบายน้ำ $H_d = \\mathbf{{{H_d_cm:.0f}}}$ cm ({drainage_type.split(' ')[0]})")
+        st.write(f"- คำนวณ Time Factor: $T_v = \\frac{{{Cv_cm2_day:.1f} \\times {target_day}}}{{({H_d_cm:.0f})^2}} = \\mathbf{{{Tv_target:.4f}}}$")
+        st.write(f"- **ผลลัพธ์ข้อ ⑦ ได้ค่า $U_v$:** $\\mathbf{{{Uv_target_pct:.2f}\\%}}$")
 
-    # STEP 8 & 9
+    # STEP 8 & 9: Uav
     st.markdown("---")
-    st.markdown("#### ⑧-⑨ คำนวณระดับการอัดตัวคายน้ำเฉลี่ยรวม ($U_{av}$)")
+    st.markdown("#### ⑧-⑨ คำนวณระดับการอัดตัวคายน้ำเฉลี่ยรวม ($U_{av}$) - Theory of Carillo (1942)")
+    st.latex(r"U_{av} = 1 - (1 - U_r)(1 - U_v)")
+    
     Uav_target_pct = 100.0 * (1.0 - (1.0 - (Ur_target/100.0)) * (1.0 - (Uv_target_pct/100.0)))
+    
+    st.write(f"**แทนค่าที่เวลา $t = {target_day}$ วัน:**")
     st.latex(f"U_{{av}} = 1 - (1 - {Ur_target/100:.4f})(1 - {Uv_target_pct/100:.4f}) = \\mathbf{{{Uav_target_pct:.2f}\\%}}")
+    
+    summary_rows = []
+    for d_val in sorted(list(set([30, 60, target_day, 180, 270, 365]))):
+        if d_val <= 365:
+            r = df[df["Day"] == d_val].iloc[0]
+            ur_p, uv_p, uav_p = r['U_r'], r['U_v'], r['U_av']
+        else:
+            ur_p = (1 - np.exp((-8 * (Cr_cm2_day * d_val) / de2_cm2) / Fn)) * 100
+            tv_tmp = (Cv_cm2_day * d_val) / (H_d_cm**2)
+            uv_tmp = np.sqrt(4 * tv_tmp) / np.pi if tv_tmp <= 0.286 else 1 - (10**(-0.085 - 0.933 * tv_tmp))
+            uv_p = min(uv_tmp * 100, 100)
+            uav_p = 100 * (1 - (1 - ur_p/100) * (1 - uv_p/100))
+            
+        status = "✅ ผ่านเกณฑ์ (> 90%)" if uav_p >= 90 else "⏳ ยังไม่ถึงเกณฑ์"
+        summary_rows.append({
+            "เวลา t (วัน)": f"{d_val} วัน",
+            "U_r แนวรัศมี (ข้อ ⑥)": f"{ur_p:.2f}%",
+            "U_v แนวดิ่ง (ข้อ ⑦)": f"{uv_p:.2f}%",
+            "⑧ U_av รวม = 1-(1-Ur)(1-Uv)": f"★ {uav_p:.2f}%" if d_val == target_day else f"{uav_p:.2f}%",
+            "⑨ ตรวจระดับ U_av > 90%": status
+        })
+    st.table(pd.DataFrame(summary_rows))
+    
+    if Uav_target_pct >= 90.0:
+        st.success(f"🎯 **บทสรุปข้อ ⑨:** ที่ระยะติดตั้ง PVD **S = {S:.2f} เมตร** ชั้นดินสามารถอัดตัวคายน้ำได้ **{Uav_target_pct:.2f}%** ณ วันที่ {target_day} ซึ่ง **ผ่านเกณฑ์ (> 90%)** เป็นไปตามข้อกำหนดการออกแบบครับ")
+    else:
+        st.warning(f"⚠️ **บทสรุปข้อ ⑨:** ณ วันเป้าหมายที่ {target_day} วัน ชั้นดินอัดตัวคายน้ำได้เพียง **{Uav_target_pct:.2f}%** (ยังไม่ผ่านเกณฑ์ > 90%) แนะนำให้ลดระยะห่าง $S$ ลง หรือเพิ่มเวลาการรอคอยครับ")
 
-# TAB 2 & 3: Charts & Data
+# =========================================================
+# TAB 2-4: กราฟ, ข้อมูล และส่งออก Word Report
+# =========================================================
 with tab_charts:
-    c1, c2 = st.columns(2)
-    with c1:
-        fig1 = go.Figure(go.Scatter(x=df["Day"], y=df["Settlement"], line=dict(color='#EF4444', width=3)))
-        fig1.update_layout(title="📉 พัฒนาการการทรุดตัวตามเวลา", xaxis_title="วัน", yaxis_title="การทรุดตัว (m)", yaxis=dict(autorange="reversed"))
-        st.plotly_chart(fig1, use_container_width=True)
-    with c2:
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=df["Day"], y=df["U_av"], name='รวม (U_av)', line=dict(color='#10B981', width=3)))
-        fig2.add_trace(go.Scatter(x=df["Day"], y=df["U_r"], name='แนวรัศมี (U_r)', line=dict(color='#3B82F6', dash='dash')))
-        fig2.add_trace(go.Scatter(x=df["Day"], y=df["U_v"], name='แนวดิ่ง (U_v)', line=dict(color='#9CA3AF', dash='dot')))
-        fig2.add_hline(y=90, line_dash="dash", line_color="#F59E0B")
-        fig2.update_layout(title="📊 อัตราการอัดตัวคายน้ำ (%)", xaxis_title="วัน", yaxis_title="%", yaxis=dict(range=[0, 105]))
-        st.plotly_chart(fig2, use_container_width=True)
+    col_left, col_right = st.columns(2)
+    with col_left:
+        fig_settle = go.Figure()
+        fig_settle.add_trace(go.Scatter(x=df["Day"], y=df["Settlement"], mode='lines', name='Settlement (m)', line=dict(color='#EF4444', width=3)))
+        fig_settle.update_layout(title="📉 กราฟพัฒนาการการทรุดตัวตามเวลา", xaxis_title="เวลา (วัน)", yaxis_title="การทรุดตัว (เมตร)", yaxis=dict(autorange="reversed"), template="plotly_white", height=380)
+        st.plotly_chart(fig_settle, use_container_width=True)
+
+    with col_right:
+        fig_u = go.Figure()
+        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_av"], name='รวม (U_av)', line=dict(color='#10B981', width=3)))
+        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_r"], name='แนวรัศมี PVD (U_r)', line=dict(color='#3B82F6', dash='dash')))
+        fig_u.add_trace(go.Scatter(x=df["Day"], y=df["U_v"], name='แนวดิ่ง ดิน (U_v)', line=dict(color='#9CA3AF', dash='dot')))
+        fig_u.add_hline(y=90, line_dash="dash", line_color="#F59E0B", annotation_text="Target 90%")
+        fig_u.update_layout(title="📊 อัตราการอัดตัวคายน้ำ (Degree of Consolidation)", xaxis_title="เวลา (วัน)", yaxis_title="Consolidation (%)", yaxis=dict(range=[0, 105]), template="plotly_white", height=380)
+        st.plotly_chart(fig_u, use_container_width=True)
 
 with tab_data:
-    st.dataframe(df.style.format({"U_v": "{:.2f}%", "U_r": "{:.2f}%", "U_av": "{:.2f}%", "Settlement": "{:.4f} m"}), use_container_width=True)
+    st.subheader("ตารางแสดงค่าการคำนวณรายวัน")
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 ดาวน์โหลดข้อมูลเป็น CSV", data=csv, file_name="pvd_consolidation_result.csv", mime="text/csv")
+    st.dataframe(df.style.format({"U_v": "{:.2f}%", "U_r": "{:.2f}%", "U_av": "{:.2f}%", "Settlement": "{:.4f} m"}), use_container_width=True, height=300)
 
-# TAB 4: Summary & Export Word Report
 with tab_summary:
-    st.subheader("💡 สรุปผลการประเมินและออกรายงานเชิงวิศวกรรม")
+    st.success(f"**สรุปผลการประเมิน:** ในระยะติดตั้ง PVD ที่ **{S:.2f} เมตร** รูปแบบ **{pattern}**")
+    st.write(f"- การทรุดตัวทั้งหมดเมื่อสิ้นสุดกระบวนการ ($S_{{final}}$): **{S_final:.3f} เมตร**")
+    if isinstance(days_90, (int, np.integer)):
+        st.write(f"- ดินจะทรุดตัวถึง 90% ภายในเวลา **{days_90} วัน**")
+    else:
+        st.warning("- การติดตั้ง PVD ระยะนี้ยังไม่สามารถทำให้ดินทรุดตัวถึง 90% ได้ภายใน 1 ปี แนะนำให้ **ลดระยะห่าง S** ลง")
+
+    st.markdown("---")
+    st.markdown("#### 📄 ส่งออกรายงานสรุปผลสรุปเป็นคำพูด (Word Document)")
+    st.write("กดปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์เอกสาร `.docx` สรุปผลเชิงวิศวกรรมเรียบร้อยแล้ว")
     
     S_target = (Uav_target_pct / 100.0) * S_final
     
-    if Uav_target_pct >= 90.0:
-        st.success(
-            f"**สรุปผลการประเมิน:** การติดตั้ง PVD ระยะห่าง **{S:.2f} เมตร** ({pattern}) "
-            f"สามารถเร่งการอัดตัวคายน้ำได้ **{Uav_target_pct:.2f}%** ณ เวลา **{target_day} วัน** "
-            f"คิดเป็นระยะทรุดตัว **{S_target:.3f} เมตร** (จากทั้งหมด {S_final:.3f} m) **ซึ่งผ่านเกณฑ์การออกแบบ (> 90%)**"
-        )
-    else:
-        st.warning(
-            f"**สรุปผลการประเมิน:** ณ เวลา **{target_day} วัน** การอัดตัวคายน้ำคืบหน้าไปได้ **{Uav_target_pct:.2f}%** "
-            f"(ยังไม่ถึงเกณฑ์ 90%) คิดเป็นระยะทรุดตัว **{S_target:.3f} เมตร** "
-            f"แนะนำให้ลดระยะห่าง S หรือเพิ่มเวลา Preloading"
-        )
-    
-    st.markdown("---")
-    st.markdown("#### 📄 ส่งออกรายงานสรุปผลสรุปเป็นคำพูด (Word Document)")
-    st.write("กดปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์ `.docx` ซึ่งถูกเรียบเรียงสรุปผลเป็นข้อความเชิงวิศวกรรมเรียบร้อยแล้ว")
-    
-    # ดึงฟังก์ชันสร้างไฟล์ Word
+    # สร้างไฟล์ Word ในหน่วยความจำ RAM และยื่นปุ่มดาวน์โหลดให้ผู้ใช้
     doc_file = generate_word_report(
         pattern=pattern,
         S=S,
