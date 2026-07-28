@@ -30,7 +30,7 @@ st.markdown("""
 # ---------------------------------------------------------
 # 2. HELPER FUNCTION: สรุปผล + สร้างตารางใน WORD REPORT
 # ---------------------------------------------------------
-def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct, Ur_pct, Uv_pct, S_final, S_target, days_90, d_w_mm, d_e_m, n, Fn, df):
+def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day, Uav_pct, Ur_pct, Uv_pct, S_final, S_target, days_90, d_w_mm, d_e_m, n, Fn, df):
     doc = Document()
     
     # 1. หัวข้อรายงาน
@@ -44,7 +44,7 @@ def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct,
     # 2. ข้อมูลพารามิเตอร์การออกแบบ
     doc.add_heading('1. ข้อมูลและพารามิเตอร์การออกแบบ (Input Parameters)', level=2)
     p1 = doc.add_paragraph()
-    p1.add_run(f"ทำการติดตั้ง PVD ในชั้นดินอ่อนความหนา {H_soil:.1f} m โดยจัดวางในรูปแบบ {pattern} ที่ระยะห่าง S = {S:.2f} m รายละเอียดพารามิเตอร์สรุปดังตารางด้านล่าง:")
+    p1.add_run(f"ทำการติดตั้ง PVD ในชั้นดินอ่อนความหนาอัดตัว {H_soil:.1f} m (ความหนาคำนวณทรุดตัว S_final = {H_sfinal:.1f} m) โดยจัดวางในรูปแบบ {pattern} ที่ระยะห่าง S = {S:.2f} m รายละเอียดพารามิเตอร์สรุปดังตารางด้านล่าง:")
 
     # --- WORD TABLE 1: Input Parameters Table ---
     t1 = doc.add_table(rows=1, cols=3)
@@ -61,6 +61,7 @@ def generate_word_report(pattern, S, H_soil, H_pvd, Cv, Cr, target_day, Uav_pct,
         ("รูปแบบการจัดวาง (Pattern)", f"{pattern}", "-"),
         ("ระยะห่างการติดตั้ง (S)", f"{S:.2f}", "m"),
         ("ความหนาชั้นดินอ่อน (H_soil)", f"{H_soil:.1f}", "m"),
+        ("ความหนาชั้นดินคำนวณทรุดตัว (H_sfinal)", f"{H_sfinal:.1f}", "m"),
         ("ความลึกแผ่น PVD (H_pvd)", f"{H_pvd:.1f}", "m"),
         ("ค่าสัมประสิทธิ์ Cv", f"{Cv:.1f}", "cm²/day"),
         ("ค่าสัมประสิทธิ์ Cr", f"{Cr:.1f}", "cm²/day"),
@@ -263,6 +264,10 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
         e0 = st.number_input("Initial Void Ratio (e0)", value=get_param("e0", float, 2.00), step=0.1, key="mem_e0", on_change=update_url)
 
     Cc = st.number_input("Compression Index (Cc)", value=get_param("Cc", float, 0.80), step=0.05, key="mem_Cc", on_change=update_url)
+    
+    # เพิ่มค่าความหนาชั้นดินสำหรับ S_final ไว้บริเวณเดียวกับ e0 และ Cc ตามที่คุณต้องการ
+    H_sfinal = st.number_input("ความหนาชั้นดินคำนวณทรุดตัว: H_sfinal (m)", value=get_param("H_sfinal", float, 30.0), step=1.0, key="mem_H_sfinal", on_change=update_url)
+
     sigma_0 = st.number_input("Effective Stress เดิม: σ0' (kPa)", value=get_param("sigma_0", float, 50.0), step=5.0, key="mem_sigma_0", on_change=update_url)
     delta_sigma = st.number_input("น้ำหนักถมเพิ่ม: Δσ (kPa)", value=get_param("delta_sigma", float, 80.0), step=5.0, key="mem_delta_sigma", on_change=update_url)
 
@@ -308,7 +313,9 @@ else:
 denom = F_n_eff + (0.8 * L_factor)
 H_d_m = H_soil / 2.0 if "2 ทาง" in drainage_type else H_soil
 H_d_cm = H_d_m * 100.0
-S_final = H_soil * (Cc / (1.0 + e0)) * np.log10((sigma_0 + delta_sigma) / sigma_0)
+
+# คำนวณ S_final โดยใช้ค่า H_sfinal ที่แยกออกมา
+S_final = H_sfinal * (Cc / (1.0 + e0)) * np.log10((sigma_0 + delta_sigma) / sigma_0)
 
 t_day = float(target_day)
 Tv = (Cv_cm2_day * t_day) / (H_d_cm ** 2)
@@ -452,7 +459,7 @@ with tab_steps:
             st.write(f"• **อัตราส่วน $k_c / k_m$:** {kc_value/km_value:.2e}")
             st.write(f"• **ตัวหาร $F(n) + 0.8L$:** `{denom:.4f}`")
     else:
-        st.info("ℹ️ ไม่ได้เปิดใช้งานการคิดผลกระทบจาก Sand Mat (ค่า $L = 0$)")
+        st.info("ℹ️ ไม่ได้เปิดใช้งานการคิดผลกระทบจาก Sand Mat (ค่าสัมประสิทธิ์ $L = 0$)")
 
     # STEP 7: Uv
     st.markdown("---")
@@ -512,15 +519,16 @@ with tab_steps:
     else:
         st.warning(f"⚠️ **บทสรุปข้อ ⑨:** ณ วันเป้าหมายที่ {target_day} วัน ชั้นดินอัดตัวคายน้ำได้เพียง **{Uav_target_pct:.2f}%** (ยังไม่ผ่านเกณฑ์ > 90%) แนะนำให้ลดระยะห่าง $S$ ลง หรือเพิ่มเวลาการรอคอยครับ")
 
-    # 🎯 ย้ายการแสดงผลการคำนวณ S_final มาอยู่ด้านล่างสุดตรงนี้ครับ
+    # ★ การคำนวณ S_final (ใช้อ้างอิงค่า H_sfinal ที่แยกออกมาใหม่)
     st.markdown("---")
     st.markdown("#### ★ การคำนวณการทรุดตัวสูงสุด ($S_{final}$) ที่เกิดขึ้นเมื่อสิ้นสุดกระบวนการ")
     col_sf1, col_sf2 = st.columns([1, 1.5])
     with col_sf1:
-        st.latex(r"S_{final} = H_{soil} \cdot \frac{C_c}{1 + e_0} \cdot \log_{10}\left(\frac{\sigma_0' + \Delta\sigma}{\sigma_0'}\right)")
+        st.latex(r"S_{final} = H_{sfinal} \cdot \frac{C_c}{1 + e_0} \cdot \log_{10}\left(\frac{\sigma_0' + \Delta\sigma}{\sigma_0'}\right)")
     with col_sf2:
         st.write("**แสดงการแทนค่าตัวเลขจากพารามิเตอร์ที่กำหนด:**")
-        st.latex(f"S_{{final}} = {H_soil:.2f} \\cdot \\frac{{{Cc:.3f}}}{{1 + {e0:.3f}}} \\cdot \\log_{{10}}\\left(\\frac{{{sigma_0:.2f} + {delta_sigma:.2f}}}{{{sigma_0:.2f}}}\\right)")
+        st.latex(f"S_{{final}} = {H_sfinal:.2f} \\cdot \\frac{{{Cc:.3f}}}{{1 + {e0:.3f}}} \\cdot \\log_{{10}}\\left(\\frac{{{sigma_0:.2f} + {delta_sigma:.2f}}}{{{sigma_0:.2f}}}\\right)")
+        st.write(f"- 💡 **ความหนาชั้นดินคำนวณทรุดตัว ($H_{{sfinal}}$):** $\\mathbf{{{H_sfinal:.2f}}}$ **เมตร**")
         st.write(f"- 💡 **การทรุดตัวสูงสุด ($S_{{final}}$):** $\\mathbf{{{S_final:.4f}}}$ **เมตร** (หรือ `{S_final*100:.2f}` cm)")
         st.write(f"- 💡 **การทรุดตัว ณ วันที่ {target_day} ($S_t = U_{{av}} \\times S_{{final}}$):** $\\mathbf{{{St:.4f}}}$ **เมตร** (หรือ `{St*100:.2f}` cm)")
 
@@ -552,7 +560,7 @@ with tab_data:
 
 with tab_summary:
     st.success(f"**สรุปผลการประเมิน:** ในระยะติดตั้ง PVD ที่ **{S:.2f} เมตร** รูปแบบ **{pattern}**")
-    st.write(f"- การทรุดตัวทั้งหมดเมื่อสิ้นสุดกระบวนการ ($S_{{final}}$): **{S_final:.3f} เมตร**")
+    st.write(f"- การทรุดตัวทั้งหมดเมื่อสิ้นสุดกระบวนการ ($S_{{final}}$ จาก $H_{{sfinal}} = {H_sfinal:.1f}$ m): **{S_final:.3f} เมตร**")
     if isinstance(days_90, (int, np.integer)):
         st.write(f"- ดินจะทรุดตัวถึง 90% ภายในเวลา **{days_90} วัน**")
     else:
@@ -571,6 +579,7 @@ with tab_summary:
         pattern=pattern,
         S=S,
         H_soil=H_soil,
+        H_sfinal=H_sfinal,
         H_pvd=H_pvd,
         Cv=Cv_cm2_day,
         Cr=Cr_cm2_day,
