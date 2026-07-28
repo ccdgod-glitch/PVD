@@ -626,9 +626,9 @@ doc_file = generate_word_report(
     df=df
 )
     
-    st.download_button(
-        label="📥 ดาวน์โหลดรายงานสรุปผลพร้อมตาราง (Word File .docx)",
-        data=doc_file,
-        file_name=f"PVD_Engineering_Report_S{S}m_{target_day}days.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+st.download_button(
+    label="📥 ดาวน์โหลดรายงานสรุปผลพร้อมตาราง (Word File .docx)",
+    data=doc_file,
+    file_name=f"PVD_Engineering_Report_S{S}m_{target_day}days.docx",
+    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
