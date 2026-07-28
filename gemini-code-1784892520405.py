@@ -353,6 +353,22 @@ else:
 
 # 2. คำนวณ U_r แบบพิจารณา L (Sand Mat) และ F(n) / Smear Effect
 # Denominator = F_n_eff + 0.8 * L_factor
+# 1. คำนวณ F(n) ปกติ
+Fn = ((n**2) / (n**2 - 1)) * np.log(n) - ((3 * n**2 - 1) / (4 * n**2))
+
+# 2. กำหนดค่า F_n_eff ให้ครอบคลุมทั้งกรณีเปิดและปิด Smear Effect (ป้องกัน NameError)
+if include_smear:
+    F_n_eff = Fn + (kh_ks_ratio - 1) * np.log(d_s_ratio)
+else:
+    F_n_eff = Fn  # << ต้องมีบรรทัดนี้เพื่อตั้งค่าเริ่มต้นเมื่อไม่ได้คิด Smear
+
+# 3. คำนวณ Sand Mat Factor (L)
+if include_sandmat and H_m > 0 and km_value > 0:
+    L_factor = (32.0 / (np.pi ** 2)) * (1.0 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / dw_m) ** 2)
+else:
+    L_factor = 0.0
+
+# 4. คำนวณตัวหารรวม (บรรทัดที่เคยติด Error จะใช้งานได้ทันที)
 denom = F_n_eff + (0.8 * L_factor)
 
 # สูตร Ur พิจารณา Sand Mat
