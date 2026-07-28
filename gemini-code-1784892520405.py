@@ -249,10 +249,27 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
         Cr_cm2_day = (Cr_m2_yr / 365.25) * 10000.0
 
     st.markdown("---")
+    # 🎯 นำระบบคำนวณ e0 จาก Lab มาวางรวมตรงนี้ (พร้อมระบบจำค่าใน URL)
+    use_lab_data = st.checkbox("คำนวณ e₀ จากผลทดสอบ Lab", value=get_param("uselab", bool, False), key="mem_uselab", on_change=update_url)
+    if use_lab_data:
+        Gs = st.number_input("Specific Gravity (Gs)", value=get_param("Gs", float, 2.65), step=0.01, key="mem_Gs", on_change=update_url)
+        w_wet = st.number_input("น้ำหนักดินเปียก W_wet (g)", value=get_param("wwet", float, 120.0), step=1.0, key="mem_wwet", on_change=update_url)
+        w_dry = st.number_input("น้ำหนักดินแห้ง W_dry (g)", value=get_param("wdry", float, 80.0), step=1.0, key="mem_wdry", on_change=update_url)
+        V_cm3 = st.number_input("ปริมาตรวงแหวน V (cm³)", value=get_param("Vcm3", float, 60.0), step=1.0, key="mem_Vcm3", on_change=update_url)
+        
+        w_water_content = (w_wet - w_dry) / w_dry
+        gamma_bulk = w_wet / V_cm3
+        gamma_d = gamma_bulk / (1.0 + w_water_content)
+        e0 = ((Gs * 1.0) / gamma_d) - 1.0
+        st.info(f"💡 e₀ ที่คำนวณได้ = **{e0:.3f}**")
+    else:
+        e0 = st.number_input("Initial Void Ratio (e0)", value=get_param("e0", float, 2.00), step=0.1, key="mem_e0", on_change=update_url)
+
+    # ช่องกรอก Cc เอาไว้คำนวณ S_final ตามที่ต้องการ
     Cc = st.number_input("Compression Index (Cc)", value=get_param("Cc", float, 0.80), step=0.05, key="mem_Cc", on_change=update_url)
-    e0 = st.number_input("Initial Void Ratio (e0)", value=get_param("e0", float, 2.00), step=0.1, key="mem_e0", on_change=update_url)
     sigma_0 = st.number_input("Effective Stress เดิม: σ0' (kPa)", value=get_param("sigma_0", float, 50.0), step=5.0, key="mem_sigma_0", on_change=update_url)
     delta_sigma = st.number_input("น้ำหนักถมเพิ่ม: Δσ (kPa)", value=get_param("delta_sigma", float, 80.0), step=5.0, key="mem_delta_sigma", on_change=update_url)
+
 
 with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมาย & Smear Effect", expanded=True):
     target_day = st.number_input("วันเป้าหมายหลักที่ต้องการตรวจสอบ (วัน)", value=get_param("target_day", int, 90), step=10, min_value=1, key="mem_target_day", on_change=update_url)
@@ -262,24 +279,6 @@ with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมา�
         kh_ks_ratio = st.number_input("อัตราส่วน kh / ks", value=get_param("kh_ks", float, 3.0), step=0.5, key="mem_kh_ks", on_change=update_url)
     else:
         d_s_ratio, kh_ks_ratio = 1.0, 1.0
-# --- เพิ่มในส่วน Sidebar ข้อมูลดิน (คำนวณ e0 จาก Lab) ---
-with st.sidebar.expander("🧪 คุณสมบัติดิน & ผลทดสอบ Lab", expanded=False):
-    use_lab_data = st.checkbox("คำนวณ e₀ จากผลทดสอบ Lab", value=False)
-    if use_lab_data:
-        Gs = st.number_input("Specific Gravity (Gs)", value=2.65, step=0.01)
-        w_wet = st.number_input("น้ำหนักดินเปียก W_wet (g)", value=120.0, step=1.0)
-        w_dry = st.number_input("น้ำหนักดินแห้ง W_dry (g)", value=80.0, step=1.0)
-        V_cm3 = st.number_input("ปริมาตรวงแหวน V (cm³)", value=60.0, step=1.0)
-        gamma_w = 1.0 # g/cm³
-        
-        # คำนวณ e0 จาก Lab
-        w_water_content = (w_wet - w_dry) / w_dry
-        gamma_bulk = w_wet / V_cm3
-        gamma_d = gamma_bulk / (1 + w_water_content)
-        e0 = ((Gs * gamma_w) / gamma_d) - 1.0
-        st.info(f"💡 e₀ ที่คำนวณได้ = **{e0:.3f}**")
-    else:
-        e0 = st.number_input("Initial Void Ratio (e₀)", value=1.10, step=0.05)
 
 
 with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับน้ำ)", expanded=True):
@@ -288,11 +287,10 @@ with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับ
         H_m = st.number_input("ความหนาแผ่นทราย H_m (m)", value=get_param("Hm", float, 0.80), step=0.1, key="mem_Hm", on_change=update_url)
         B_sand = st.number_input("ความกว้างครึ่งหนึ่งของแผ่นทราย B (m)", value=get_param("Bsand", float, 5.0), step=0.5, key="mem_Bsand", on_change=update_url)
         
-        # 🎯 ปรับเปลี่ยนการแสดงผลข้อความกำกับ (Label) ให้เป็นเลขยกกำลัง
         kc_value = st.number_input("การซึมน้ำดินเหนียว $k_c$ ($10^{-7}$ cm/s)", value=get_param("kc", float, 1e-7), format="%.2e", key="mem_kc", on_change=update_url)
         km_value = st.number_input("การซึมน้ำแผ่นทราย $k_m$ ($10^{-3}$ cm/s)", value=get_param("km", float, 1e-3), format="%.2e", key="mem_km", on_change=update_url)
     else:
-        H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3     
+        H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3
 
 # =========================================================
 # 5. CALCULATION ENGINE (ปรับปรุงลำดับและแก้ชื่อตัวแปรแล้ว)
