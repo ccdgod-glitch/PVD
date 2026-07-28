@@ -293,11 +293,17 @@ with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับ
     else:
         H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3        
 
+# =========================================================
+# 5. CALCULATION ENGINE (ปรับปรุงลำดับและแก้ชื่อตัวแปรแล้ว)
+# =========================================================
+import numpy as np
+import pandas as pd
+
 # ---------------------------------------------------------
-# 5. CALCULATION ENGINE
+# Step 1: เรขาคณิต PVD
 # ---------------------------------------------------------
 a_m, b_m = a_mm / 1000.0, b_mm / 1000.0
-d_w_m = (a_m + b_m) / 2.0  # สูตร (a+b)/2 ตรงตามสไลด์
+d_w_m = (a_m + b_m) / 2.0  # วิธีของ Rixner ตามสไลด์
 d_w_cm = d_w_m * 100.0
 d_w_mm = d_w_m * 1000.0
 
@@ -306,84 +312,94 @@ d_e_cm = d_e_m * 100.0
 
 n = d_e_m / d_w_m
 
-if include_smear:
-    s = d_s_ratio
-    Fn = np.log(n / s) + (kh_ks_ratio * np.log(s)) - 0.75
-else:
-    Fn = (n**2 / (n**2 - 1)) * np.log(n) - (3 * n**2 - 1) / (4 * n**2)
-
-H_d_m = H_soil / 2.0 if "2 ทาง" in drainage_type else H_soil
-H_d_cm = H_d_m * 100.0
-
-S_final = H_soil * (Cc / (1 + e0)) * np.log10((sigma_0 + delta_sigma) / sigma_0)
-
-days = np.arange(1, 366)
-times_years = days / 365.25
-U_v_list, U_r_list, U_av_list, S_t_list = [], [], [], []
-
-for t_yr, d_day in zip(times_years, days):
-    Tv = (Cv_cm2_day * d_day) / (H_d_cm**2)
-    U_v = np.sqrt(4 * Tv) / np.pi if Tv <= 0.286 else 1 - (10**(-0.085 - 0.933 * Tv))
-    U_v = min(U_v, 1.0)
-    
-    Tr = (Cr_cm2_day * d_day) / (d_e_cm**2)
-    U_r = 1 - np.exp((-8 * Tr) / Fn)
-    U_r = min(U_r, 1.0)
-    
-    U_av = 1 - (1 - U_r) * (1 - U_v)
-    S_t = U_av * S_final
-    
-    U_v_list.append(U_v * 100)
-    U_r_list.append(U_r * 100)
-    U_av_list.append(U_av * 100)
-    S_t_list.append(S_t)
-
-df = pd.DataFrame({"Day": days, "U_v": U_v_list, "U_r": U_r_list, "U_av": U_av_list, "Settlement": S_t_list})
-
-u90_idx = df[df["U_av"] >= 90].first_valid_index()
-days_90 = df.loc[u90_idx, "Day"] if u90_idx is not None else "> 365"
-import numpy as np
-
-# 1. คำนวณดัชนีความต้านทาน L ของ Sand Mat
-if include_sandmat and H_m > 0 and km_value > 0:
-    # dw แปลงเป็นเมตร (dw_m)
-    L_factor = (32 / (np.pi ** 2)) * (1 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / dw_m) ** 2)
-else:
-    L_factor = 0.0
-
-# 2. คำนวณ U_r แบบพิจารณา L (Sand Mat) และ F(n) / Smear Effect
-# Denominator = F_n_eff + 0.8 * L_factor
-# 1. คำนวณ F(n) ปกติ
+# ---------------------------------------------------------
+# Step 2: ตัวประกอบระยะห่าง F(n), Smear Effect & Sand Mat (L)
+# ---------------------------------------------------------
+# 2.1 คำนวณ Fn หลัก
 Fn = ((n**2) / (n**2 - 1)) * np.log(n) - ((3 * n**2 - 1) / (4 * n**2))
 
-# 2. กำหนดค่า F_n_eff ให้ครอบคลุมทั้งกรณีเปิดและปิด Smear Effect (ป้องกัน NameError)
+# 2.2 คิดผล Smear Effect (ถ้ามี)
 if include_smear:
     F_n_eff = Fn + (kh_ks_ratio - 1) * np.log(d_s_ratio)
 else:
-    F_n_eff = Fn  # << ต้องมีบรรทัดนี้เพื่อตั้งค่าเริ่มต้นเมื่อไม่ได้คิด Smear
+    F_n_eff = Fn
 
-# 3. คำนวณ Sand Mat Factor (L)
+# 2.3 คิดผล Sand Mat (L) (แก้ชื่อตัวแปร d_w_m เรียบร้อยแล้ว)
 if include_sandmat and H_m > 0 and km_value > 0:
-    L_factor = (32.0 / (np.pi ** 2)) * (1.0 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / dw_m) ** 2)
+    L_factor = (32.0 / (np.pi ** 2)) * (1.0 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / d_w_m) ** 2)
 else:
     L_factor = 0.0
 
-# 4. คำนวณตัวหารรวม (บรรทัดที่เคยติด Error จะใช้งานได้ทันที)
+# 2.4 ตัวหารรวมสำหรับ Ur
 denom = F_n_eff + (0.8 * L_factor)
 
 # ---------------------------------------------------------
-# 1. คำนวณ Time Factor ในแนวรัศมี (ตั้งชื่อตัวแปรว่า Tr)
-t_day = float(target_day)
-Tr = (Cr_cm2_day * t_day) / ((de * 100)**2)
-
-# 2. คำนวณ Ur (ใช้ Tr ให้ตรงกับด้านบน)
-Ur = 1.0 - np.exp((-8.0 * Tr) / denom)
+# Step 3: ระยะระบายน้ำ & การยุบตัวสูงสุด (S_final)
 # ---------------------------------------------------------
+H_d_m = H_soil / 2.0 if "2 ทาง" in drainage_type else H_soil
+H_d_cm = H_d_m * 100.0
 
+S_final = H_soil * (Cc / (1.0 + e0)) * np.log10((sigma_0 + delta_sigma) / sigma_0)
 
-# 👆👆👆 วางเสร็จแล้ว โค้ดบรรทัดถัดไปจะเป็นการหาค่า Uv และ Uav ต่อตามปกติครับ
-Hd = (H_soil / 2.0) if "2 ทาง" in drainage_type else H_soil
-Tv = (Cv_cm2_day * t_day) / ((Hd * 100)**2)
+# ---------------------------------------------------------
+# Step 4: คำนวณ ณ วันเป้าหมาย (target_day)
+# ---------------------------------------------------------
+t_day = float(target_day)
+
+# 4.1 แนวดิ่ง (Uv)
+Tv = (Cv_cm2_day * t_day) / (H_d_cm ** 2)
+if Tv <= 0.282:
+    Uv = (2.0 * np.sqrt(Tv)) / np.sqrt(np.pi)
+else:
+    Uv = 1.0 - (10 ** (-(Tv + 0.085) / 0.933))
+Uv = min(max(Uv, 0.0), 1.0)
+
+# 4.2 แนวรัศมี (Ur) (ใช้ denom ที่คิด Sand Mat แล้ว)
+Tr = (Cr_cm2_day * t_day) / (d_e_cm ** 2)
+Ur = 1.0 - np.exp((-8.0 * Tr) / denom)
+Ur = min(max(Ur, 0.0), 1.0)
+
+# 4.3 รวม Uav และการยุบตัว St
+Uav = 1.0 - ((1.0 - Ur) * (1.0 - Uv))
+St = Uav * S_final
+
+# ---------------------------------------------------------
+# Step 5: สร้างตารางและข้อมูลสำหรับทำกราฟ (1 - 365 วัน)
+# ---------------------------------------------------------
+days = np.arange(1, 366)
+U_v_list, U_r_list, U_av_list, S_t_list = [], [], [], []
+
+for d_day in days:
+    # Tv & Uv
+    Tv_i = (Cv_cm2_day * d_day) / (H_d_cm ** 2)
+    U_v_i = (2.0 * np.sqrt(Tv_i)) / np.sqrt(np.pi) if Tv_i <= 0.282 else 1.0 - (10 ** (-(Tv_i + 0.085) / 0.933))
+    U_v_i = min(max(U_v_i, 0.0), 1.0)
+    
+    # Tr & Ur (คำนวณผ่าน denom เดียวกัน)
+    Tr_i = (Cr_cm2_day * d_day) / (d_e_cm ** 2)
+    U_r_i = 1.0 - np.exp((-8.0 * Tr_i) / denom)
+    U_r_i = min(max(U_r_i, 0.0), 1.0)
+    
+    # Uav & St
+    U_av_i = 1.0 - ((1.0 - U_r_i) * (1.0 - U_v_i))
+    S_t_i = U_av_i * S_final
+    
+    U_v_list.append(U_v_i * 100.0)
+    U_r_list.append(U_r_i * 100.0)
+    U_av_list.append(U_av_i * 100.0)
+    S_t_list.append(S_t_i)
+
+df = pd.DataFrame({
+    "Day": days, 
+    "U_v": U_v_list, 
+    "U_r": U_r_list, 
+    "U_av": U_av_list, 
+    "Settlement": S_t_list
+})
+
+# หาวันที่ Uav ถึง 90%
+u90_idx = df[df["U_av"] >= 90.0].first_valid_index()
+days_90 = df.loc[u90_idx, "Day"] if u90_idx is not None else "> 365"
 
 # ---------------------------------------------------------
 # 6. DASHBOARD DISPLAY
