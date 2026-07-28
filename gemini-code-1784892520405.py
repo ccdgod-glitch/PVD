@@ -57,7 +57,6 @@ def generate_word_report(
 ):
   doc = Document()
 
-  # 1. หัวข้อรายงาน
   title = doc.add_heading("รายงานสรุปผลการวิเคราะห์การเร่งการทรุดตัวด้วย PVD", level=1)
   if title.runs:
     title.runs[0].font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)
@@ -65,7 +64,6 @@ def generate_word_report(
   doc.add_paragraph(f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y')}")
   doc.add_paragraph("-" * 55)
 
-  # 2. ข้อมูลพารามิเตอร์การออกแบบ
   doc.add_heading(
       "1. ข้อมูลและพารามิเตอร์การออกแบบ (Input Parameters)", level=2
   )
@@ -77,7 +75,6 @@ def generate_word_report(
       " รายละเอียดพารามิเตอร์สรุปดังตารางด้านล่าง:"
   )
 
-  # --- WORD TABLE 1: Input Parameters Table ---
   t1 = doc.add_table(rows=1, cols=3)
   t1.style = "Table Grid"
   hdr_cells1 = t1.rows[0].cells
@@ -107,9 +104,8 @@ def generate_word_report(
     row_cells[1].text = p_val
     row_cells[2].text = p_unit
 
-  doc.add_paragraph()  # เว้นบรรทัด
+  doc.add_paragraph()
 
-  # 3. ผลการคำนวณ ณ วันเป้าหมาย
   doc.add_heading("2. ผลการคำนวณ ณ วันเป้าหมาย (Target Day Results)", level=2)
   status_text = (
       "บรรลุตามข้อกำหนดการออกแบบ (>= 90%)"
@@ -122,7 +118,6 @@ def generate_word_report(
   p2.add_run(f"{target_day} วัน ").bold = True
   p2.add_run("ผลการคำนวณอัตราการอัดตัวคายน้ำและการทรุดตัว สรุปได้ดังตารางด้านล่าง:")
 
-  # --- WORD TABLE 2: Target Day Summary Table ---
   t2 = doc.add_table(rows=1, cols=3)
   t2.style = "Table Grid"
   hdr_cells2 = t2.rows[0].cells
@@ -159,12 +154,10 @@ def generate_word_report(
     row_cells[1].text = r_val
     row_cells[2].text = r_note
 
-  doc.add_paragraph()  # เว้นบรรทัด
+  doc.add_paragraph()
 
-  # 4. ตารางพัฒนาการตามช่วงเวลา (Progress Table)
   doc.add_heading("3. ตารางพัฒนาการอัดตัวคายน้ำและการทรุดตัวตามช่วงเวลา", level=2)
 
-  # --- WORD TABLE 3: Consolidation Progress Over Time Table ---
   t3 = doc.add_table(rows=1, cols=6)
   t3.style = "Table Grid"
   hdr_cells3 = t3.rows[0].cells
@@ -212,9 +205,8 @@ def generate_word_report(
     row_cells[4].text = f"{st_p:.3f} m"
     row_cells[5].text = st_status
 
-  doc.add_paragraph()  # เว้นบรรทัด
+  doc.add_paragraph()
 
-  # 5. สรุปผลเชิงวิศวกรรม
   doc.add_heading("4. สรุปผลและข้อเสนอแนะเชิงวิศวกรรม", level=2)
   p3 = doc.add_paragraph()
 
@@ -254,7 +246,7 @@ st.markdown(
 )
 
 # ---------------------------------------------------------
-# 4. SIDEBAR - INPUT PARAMETERS (ระบบจำค่าอัตโนมัติผ่าน URL)
+# 4. SIDEBAR - INPUT PARAMETERS
 # ---------------------------------------------------------
 st.sidebar.title("⚙️ ตั้งค่าพารามิเตอร์การออกแบบ")
 
@@ -450,7 +442,6 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
       on_change=update_url,
   )
 
-  # เพิ่มค่าความหนาชั้นดินสำหรับ S_final ไว้บริเวณเดียวกับ e0 และ Cc ตามที่คุณต้องการ
   H_sfinal = st.number_input(
       "ความหนาชั้นดินคำนวณทรุดตัว: H_sfinal (m)",
       value=get_param("H_sfinal", float, 30.0),
@@ -515,36 +506,49 @@ with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับ
       on_change=update_url,
   )
   if include_sandmat:
+    H_sandmat_clay = st.number_input(
+        "ความหนาชั้นดินเหนียวสำหรับ Sand Mat: H (m)",
+        value=get_param("H_sandmat_clay", float, H_soil),
+        step=1.0,
+        key="mem_H_sandmat_clay",
+        on_change=update_url,
+    )
     H_m = st.number_input(
-        "ความหนาแผ่นทราย H_m (m)",
+        "ความหนาแผ่นทราย: H_m (m)",
         value=get_param("Hm", float, 0.80),
         step=0.1,
         key="mem_Hm",
         on_change=update_url,
     )
     B_sand = st.number_input(
-        "ความกว้างครึ่งหนึ่งของแผ่นทราย B (m)",
+        "ครึ่งหนึ่งความกว้างแผ่นทราย: B (m) [กว้าง = 2B]",
         value=get_param("Bsand", float, 5.0),
         step=0.5,
         key="mem_Bsand",
         on_change=update_url,
     )
     kc_value = st.number_input(
-        "การซึมน้ำดินเหนียว $k_c$ ($10^{-7}$ cm/s)",
+        "การซึมน้ำดินเหนียว: kc (cm/s)",
         value=get_param("kc", float, 1e-7),
         format="%.2e",
         key="mem_kc",
         on_change=update_url,
     )
     km_value = st.number_input(
-        "การซึมน้ำแผ่นทราย $k_m$ ($10^{-3}$ cm/s)",
+        "การซึมน้ำแผ่นทราย/วัสดุรองใต้ฐาน: km (cm/s)",
         value=get_param("km", float, 1e-3),
         format="%.2e",
         key="mem_km",
         on_change=update_url,
     )
   else:
-    H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3
+    H_sandmat_clay, H_m, B_sand, kc_value, km_value = (
+        H_soil,
+        0.80,
+        5.0,
+        1e-7,
+        1e-3,
+    )
 
 # =========================================================
 # 5. CALCULATION ENGINE
@@ -567,7 +571,7 @@ if include_sandmat and H_m > 0 and km_value > 0:
   L_factor = (
       (32.0 / (np.pi**2))
       * (1.0 / (n**2))
-      * (H_soil / H_m)
+      * (H_sandmat_clay / H_m)
       * (kc_value / km_value)
       * ((B_sand / d_w_m) ** 2)
   )
@@ -578,7 +582,6 @@ denom = F_n_eff + (0.8 * L_factor)
 H_d_m = H_soil / 2.0 if "2 ทาง" in drainage_type else H_soil
 H_d_cm = H_d_m * 100.0
 
-# คำนวณ S_final โดยใช้ค่า H_sfinal ที่แยกออกมา
 S_final = (
     H_sfinal
     * (Cc / (1.0 + e0))
@@ -677,7 +680,6 @@ with tab_steps:
   )
   st.caption("จำลองวิธีคิดเลขทีละคอลัมน์ ถอดแบบจากสไลด์เลคเชอร์และตำราปฐพีวิศวกรรม")
 
-  # STEP 5: F(n)
   st.markdown("---")
   st.markdown("#### ⑤ ตารางคำนวณเพื่อหาค่า Drain Spacing Factor: $F(n)$")
 
@@ -712,7 +714,6 @@ with tab_steps:
       f" คำนวณค่าอัตราส่วน $n = {n:.2f}$ ได้ค่า **$F(n) = {Fn:.3f}$**"
   )
 
-  # STEP 6: Ur
   st.markdown("---")
   st.markdown(
       "#### ⑥ ตารางคำนวณเพื่อหาค่า Degree of Consolidation ในแนวรัศมี ($U_r$)"
@@ -725,7 +726,7 @@ with tab_steps:
   for d_val in test_days:
     cr_t = Cr_cm2_day * d_val
     Tr_val = cr_t / de2_cm2
-    exp_term = np.exp((-8 * Tr_val) / Fn)
+    exp_term = np.exp((-8 * Tr_val) / denom)
     ur_val = (1 - exp_term) * 100.0
 
     ur_rows.append({
@@ -735,8 +736,8 @@ with tab_steps:
         "(4) de² (cm²)": f"{de2_cm2:.0f}",
         "(5) Cr × t (cm²)": f"{cr_t:.0f}",
         "(6) Tr = (5)/(4)": f"{Tr_val:.4f}",
-        "(7) F(n)": f"{Fn:.3f}",
-        "(8) exp(-8Tr/Fn)": f"{exp_term:.4f}",
+        "(7) Denom (F(n) + 0.8L)": f"{denom:.3f}",
+        "(8) exp(-8Tr/Denom)": f"{exp_term:.4f}",
         "(9) Ur (%) = 1 - (8)": (
             f"★ {ur_val:.2f}%" if d_val == target_day else f"{ur_val:.2f}%"
         ),
@@ -746,13 +747,10 @@ with tab_steps:
   Ur_target = (
       df.loc[df["Day"] == target_day, "U_r"].values[0]
       if target_day <= 365
-      else (
-          1 - np.exp((-8 * (Cr_cm2_day * target_day) / de2_cm2) / Fn)
-      )
+      else (1 - np.exp((-8 * (Cr_cm2_day * target_day) / de2_cm2) / denom))
       * 100
   )
 
-  # STEP 7: Uv
   st.markdown("---")
   st.markdown(
       "#### ⑦ คำนวณระดับการอัดตัวคายน้ำในแนวดิ่ง ($U_v$) ที่เวลา $t ="
@@ -797,7 +795,6 @@ with tab_steps:
         f" $\\mathbf{{{Uv_target_pct:.2f}\\%}}$"
     )
 
-  # STEP 8 & 9: Uav
   st.markdown("---")
   st.markdown(
       "#### ⑧-⑨ คำนวณระดับการอัดตัวคายน้ำเฉลี่ยรวม ($U_{av}$) - Theory of"
@@ -822,7 +819,7 @@ with tab_steps:
       ur_p, uv_p, uav_p = r["U_r"], r["U_v"], r["U_av"]
     else:
       ur_p = (
-          1 - np.exp((-8 * (Cr_cm2_day * d_val) / de2_cm2) / Fn)
+          1 - np.exp((-8 * (Cr_cm2_day * d_val) / de2_cm2) / denom)
       ) * 100
       tv_tmp = (Cv_cm2_day * d_val) / (H_d_cm**2)
       uv_tmp = (
@@ -854,7 +851,6 @@ with tab_steps:
         f"⚠️ **บทสรุปข้อ ⑨:** ณ วันเป้าหมายที่ {target_day} วัน ชั้นดินอัดตัวคายน้ำได้เพียง **{Uav_target_pct:.2f}%** (ยังไม่ผ่านเกณฑ์ > 90%) แนะนำให้ลดระยะห่าง $S$ ลง หรือเพิ่มเวลาการรอคอยครับ"
     )
 
-  # ★ การคำนวณ S_final (ใช้อ้างอิงค่า H_sfinal ที่แยกออกมาใหม่)
   st.markdown("---")
   st.markdown(
       "#### ★ การคำนวณการทรุดตัวสูงสุด ($S_{final}$) ที่เกิดขึ้นเมื่อสิ้นสุดกระบวนการ"
@@ -888,31 +884,79 @@ with tab_steps:
         f" `{St*100:.2f}` cm)"
     )
 
-  # 🏖️ การคำนวณกรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat) ย้ายมาอยู่ข้างล่าง S_final ตามคำขอ
+  # 🏖️ การคำนวณกรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat) พร้อมสมการตามภาพ
   st.markdown("---")
   st.markdown(
-      "### 🏖️ การคำนวณกรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat)"
+      "### 🏖️ การคำนวณกรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat Resistance)"
   )
 
   if include_sandmat:
+    st.write(
+        "สมการคำนวณดัชนีความต้านทานของแผ่นทราย ($L$) และอัตราการอัดตัวในแนวรัศมี"
+        " ($U_r$):"
+    )
     st.latex(
         r"L = \frac{32}{\pi^2} \cdot \frac{1}{n^2} \cdot \frac{H}{H_m} \cdot"
         r" \frac{k_c}{k_m} \cdot \left(\frac{B}{d_w}\right)^2"
     )
-    st.latex(
-        r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n) + 0.8L} \right)"
-    )
+    st.latex(r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n) + 0.8L} \right)")
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-      st.write(f"• **ดัชนีความต้านทาน (L):** `{L_factor:.4f}`")
-      st.write(f"• **ความหนา Sand Mat ($H_m$):** {H_m} m")
-    with col_b:
-      st.write(f"• **อัตราส่วน $k_c / k_m$:** {kc_value/km_value:.2e}")
-      st.write(f"• **ตัวหาร $F(n) + 0.8L$:** `{denom:.4f}`")
+    st.markdown("#### รายละเอียดตัวแปรตามนิยามในระบบ:")
+    sandmat_table = [
+        {
+            "ตัวแปร": "n",
+            "คำอธิบาย": "ค่าอัตราส่วนพื้นที่ระบายน้ำ (Drainage spacing factor)",
+            "ค่าปัจจุบัน": f"{n:.2f}",
+        },
+        {
+            "ตัวแปร": "H",
+            "คำอธิบาย": (
+                "ความลึกของชั้นดินเหนียว (สามารถกำหนดค่าเองในเมนูด้านซ้าย)"
+            ),
+            "ค่าปัจจุบัน": f"{H_sandmat_clay:.1f} m",
+        },
+        {
+            "ตัวแปร": "H_m",
+            "คำอธิบาย": "ความหนาของแผ่นทราย (Sand Mat)",
+            "ค่าปัจจุบัน": f"{H_m:.2f} m",
+        },
+        {
+            "ตัวแปร": "B",
+            "คำอธิบาย": "ครึ่งหนึ่งของความกว้างแผ่นทราย (ถ้าแผ่นมีความกว้าง = 2B)",
+            "ค่าปัจจุบัน": f"{B_sand:.2f} m",
+        },
+        {
+            "ตัวแปร": "d_w",
+            "คำอธิบาย": "ขนาดเส้นผ่านศูนย์กลางเทียบเท่าของท่อระบายน้ำ",
+            "ค่าปัจจุบัน": f"{d_w_m:.4f} m ({d_w_mm:.1f} mm)",
+        },
+        {
+            "ตัวแปร": "k_c",
+            "คำอธิบาย": "ค่าการซึมน้ำของดินเหนียว",
+            "ค่าปัจจุบัน": f"{kc_value:.2e} cm/s",
+        },
+        {
+            "ตัวแปร": "k_m",
+            "คำอธิบาย": (
+                "ค่าการซึมน้ำของแผ่นทราย (หรือค่าการซึมน้ำของวัสดุที่ใช้รองใต้ฐาน)"
+            ),
+            "ค่าปัจจุบัน": f"{km_value:.2e} cm/s",
+        },
+        {
+            "ตัวแปร": "L (Resistance Factor)",
+            "คำอธิบาย": "ค่าความต้านทานที่คำนวณได้",
+            "ค่าปัจจุบัน": f"★ {L_factor:.4f}",
+        },
+        {
+            "ตัวแปร": "F(n) + 0.8L",
+            "คำอธิบาย": "ตัวหารรวมในสมการ $U_r$",
+            "ค่าปัจจุบัน": f"★ {denom:.4f}",
+        },
+    ]
+    st.table(pd.DataFrame(sandmat_table))
   else:
     st.info(
-        "ℹ️ ไม่ได้เปิดใช้งานการคิดผลกระทบจาก Sand Mat (ค่าสัมประสิทธิ์ $L = 0$)"
+        "ℹ️ ไม่ได้เปิดใช้งานการคิดผลกระทบจาก Sand Mat (ค่าความต้านทาน $L = 0$)"
     )
 
 # =========================================================
