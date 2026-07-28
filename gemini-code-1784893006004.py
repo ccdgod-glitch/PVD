@@ -33,7 +33,6 @@ st.markdown("""
 def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day, Uav_pct, Ur_pct, Uv_pct, S_final, S_target, days_90, d_w_mm, d_e_m, n, Fn, df):
     doc = Document()
     
-    # 1. หัวข้อรายงาน
     title = doc.add_heading('รายงานสรุปผลการวิเคราะห์การเร่งการทรุดตัวด้วย PVD', level=1)
     if title.runs:
         title.runs[0].font.color.rgb = RGBColor(0x1E, 0x3A, 0x8A)
@@ -41,12 +40,10 @@ def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day
     doc.add_paragraph(f"วันที่ออกรายงาน: {pd.Timestamp.now().strftime('%d/%m/%Y')}")
     doc.add_paragraph("-" * 55)
     
-    # 2. ข้อมูลพารามิเตอร์การออกแบบ
     doc.add_heading('1. ข้อมูลและพารามิเตอร์การออกแบบ (Input Parameters)', level=2)
     p1 = doc.add_paragraph()
     p1.add_run(f"ทำการติดตั้ง PVD ในชั้นดินอ่อนความหนาอัดตัว {H_soil:.1f} m (ความหนาคำนวณทรุดตัว S_final = {H_sfinal:.1f} m) โดยจัดวางในรูปแบบ {pattern} ที่ระยะห่าง S = {S:.2f} m รายละเอียดพารามิเตอร์สรุปดังตารางด้านล่าง:")
 
-    # --- WORD TABLE 1: Input Parameters Table ---
     t1 = doc.add_table(rows=1, cols=3)
     t1.style = 'Table Grid'
     hdr_cells1 = t1.rows[0].cells
@@ -76,9 +73,8 @@ def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day
         row_cells[1].text = p_val
         row_cells[2].text = p_unit
         
-    doc.add_paragraph() # เว้นบรรทัด
+    doc.add_paragraph()
 
-    # 3. ผลการคำนวณ ณ วันเป้าหมาย
     doc.add_heading('2. ผลการคำนวณ ณ วันเป้าหมาย (Target Day Results)', level=2)
     status_text = "บรรลุตามข้อกำหนดการออกแบบ (>= 90%)" if Uav_pct >= 90 else "ยังไม่บรรลุตามเป้าหมาย (< 90%)"
     
@@ -87,7 +83,6 @@ def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day
     p2.add_run(f"{target_day} วัน ").bold = True
     p2.add_run("ผลการคำนวณอัตราการอัดตัวคายน้ำและการทรุดตัว สรุปได้ดังตารางด้านล่าง:")
 
-    # --- WORD TABLE 2: Target Day Summary Table ---
     t2 = doc.add_table(rows=1, cols=3)
     t2.style = 'Table Grid'
     hdr_cells2 = t2.rows[0].cells
@@ -112,12 +107,10 @@ def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day
         row_cells[1].text = r_val
         row_cells[2].text = r_note
 
-    doc.add_paragraph() # เว้นบรรทัด
+    doc.add_paragraph()
 
-    # 4. ตารางพัฒนาการตามช่วงเวลา (Progress Table)
     doc.add_heading('3. ตารางพัฒนาการอัดตัวคายน้ำและการทรุดตัวตามช่วงเวลา', level=2)
     
-    # --- WORD TABLE 3: Consolidation Progress Over Time Table ---
     t3 = doc.add_table(rows=1, cols=6)
     t3.style = 'Table Grid'
     hdr_cells3 = t3.rows[0].cells
@@ -154,9 +147,8 @@ def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day
         row_cells[4].text = f"{st_p:.3f} m"
         row_cells[5].text = st_status
 
-    doc.add_paragraph() # เว้นบรรทัด
+    doc.add_paragraph()
 
-    # 5. สรุปผลเชิงวิศวกรรม
     doc.add_heading('4. สรุปผลและข้อเสนอแนะเชิงวิศวกรรม', level=2)
     p3 = doc.add_paragraph()
     
@@ -183,10 +175,10 @@ def generate_word_report(pattern, S, H_soil, H_sfinal, H_pvd, Cv, Cr, target_day
 # 3. HEADER
 # ---------------------------------------------------------
 st.markdown('<div class="main-header">🏗️ PVD Consolidation Analytics</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">ระบบจำลองการทรุดตัวและคำนวณเวลาการอัดตัวคายน้ำชั้นดินอ่อน (ปรับหน่วยตามตำราเรียน / สไลด์เลคเชอร์)</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">ระบบจำลองการทรุดตัวและคำนวณเวลาการอัดตัวคายน้ำชั้นดินอ่อน (แยกส่วนคำนวณ Sand Mat ละเอียด)</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. SIDEBAR - INPUT PARAMETERS (ระบบจำค่าอัตโนมัติผ่าน URL)
+# 4. SIDEBAR - INPUT PARAMETERS
 # ---------------------------------------------------------
 st.sidebar.title("⚙️ ตั้งค่าพารามิเตอร์การออกแบบ")
 
@@ -264,8 +256,6 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
         e0 = st.number_input("Initial Void Ratio (e0)", value=get_param("e0", float, 2.00), step=0.1, key="mem_e0", on_change=update_url)
 
     Cc = st.number_input("Compression Index (Cc)", value=get_param("Cc", float, 0.80), step=0.05, key="mem_Cc", on_change=update_url)
-    
-    # ความหนาชั้นดินสำหรับ S_final ไว้บริเวณเดียวกับ e0 และ Cc ตามที่คุณต้องการ
     H_sfinal = st.number_input("ความหนาชั้นดินคำนวณทรุดตัว: H_sfinal (m)", value=get_param("H_sfinal", float, 30.0), step=1.0, key="mem_H_sfinal", on_change=update_url)
 
     sigma_0 = st.number_input("Effective Stress เดิม: σ0' (kPa)", value=get_param("sigma_0", float, 50.0), step=5.0, key="mem_sigma_0", on_change=update_url)
@@ -306,7 +296,6 @@ Fn = ((n**2) / (n**2 - 1)) * np.log(n) - ((3 * n**2 - 1) / (4 * n**2))
 F_n_eff = Fn + (kh_ks_ratio - 1) * np.log(d_s_ratio) if include_smear else Fn
 
 if include_sandmat and H_m > 0 and km_value > 0:
-    # L = (32 / pi^2) * (1 / n^2) * (H / H_m) * (kc / km) * (B / dw)^2  (ใช้ H_soil เป็นความลึก H ของชั้นดินเหนียว)
     L_factor = (32.0 / (np.pi ** 2)) * (1.0 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / d_w_m) ** 2)
 else:
     L_factor = 0.0
@@ -315,7 +304,6 @@ denom = F_n_eff + (0.8 * L_factor)
 H_d_m = H_soil / 2.0 if "2 ทาง" in drainage_type else H_soil
 H_d_cm = H_d_m * 100.0
 
-# คำนวณ S_final โดยใช้ค่า H_sfinal ที่แยกออกมา
 S_final = H_sfinal * (Cc / (1.0 + e0)) * np.log10((sigma_0 + delta_sigma) / sigma_0)
 
 t_day = float(target_day)
@@ -418,36 +406,48 @@ with tab_steps:
     st.table(pd.DataFrame(fn_rows))
     st.info(f"💡 **ผลลัพธ์ข้อ ⑤:** ที่ระยะติดตั้ง $S = {S:.2f}$ m คำนวณค่าอัตราส่วน $n = {n:.2f}$ ได้ค่า **$F(n) = {Fn:.3f}$**")
 
-    # STEP 6: Ur & Sand Mat (ตามรูปที่เพิ่มเข้ามา)
+    # STEP 6: Ur & Sand Mat (แยกส่วนสมการและการคำนวณ L ออกมาอย่างชัดเจน)
     st.markdown("---")
     st.markdown("#### ⑥ การคำนวณอัตราการอัดตัวคายน้ำ กรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat)")
     
     if include_sandmat:
-        st.write("สมการคำนวณอัตราการอัดตัวคายน้ำในแนวรัศมี ($U_r$) เมื่อพิจารณาความต้านทานของแผ่นทรายซับน้ำ:")
+        st.write("สมการหลักสำหรับคำนวณอัตราการอัดตัวคายน้ำในแนวรัศมี ($U_r$) เมื่อพิจารณาผลกระทบจากทรายซับน้ำ:")
         st.latex(r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n) + 0.8L} \right)")
         
-        st.write("โดยมีสมการคำนวณหาค่าดัชนีความต้านทานต่อการระบายน้ำ ($L$) ของทรายซับน้ำดังนี้:")
+        st.markdown("##### 📌 ขั้นตอนที่ 6.1: การคำนวณหาค่าดัชนีความต้านทานต่อการระบายน้ำ ($L$) ของทรายซับน้ำ")
+        st.write("สูตรคำนวณค่า $L$ ตามตำราเรียน:")
         st.latex(r"L = \frac{32}{\pi^2} \cdot \frac{1}{n^2} \cdot \frac{H}{H_m} \cdot \frac{k_c}{k_m} \cdot \left(\frac{B}{d_w}\right)^2")
         
-        st.markdown("##### 📌 รายละเอียดตัวแปรและการแทนค่าคำนวณค่า $L$:")
-        st.write(f"- **$n$ (Drainage spacing factor / อัตราส่วนพื้นที่ระบายน้ำ):** `{n:.2f}` (➔ $n^2 = {n**2:.2f}$)")
-        st.write(f"- **$H$ (ความลึกของชั้นดินเหนียว):** `{H_soil}` m")
-        st.write(f"- **$H_m$ (ความหนาของแผ่นทราย Sand Mat):** `{H_m}` m")
-        st.write(f"- **$B$ (ครึ่งหนึ่งของความกว้างแผ่นทราย):** `{B_sand}` m")
-        st.write(f"- **$d_w$ (ขนาดเส้นผ่านศูนย์กลางเทียบเท่าของท่อระบายน้ำ):** `{d_w_m:.3f}` m")
-        st.write(f"- **$k_c$ (ค่าการซึมน้ำของดินเหนียว):** `{kc_value:.1e}` cm/s")
-        st.write(f"- **$k_m$ (ค่าการซึมน้ำของแผ่นทราย):** `{km_value:.1e}` cm/s")
+        # แยกแสดงตัวคูณแต่ละพจน์ย่อยเพื่อให้ตรวจสอบตัวเลขได้ง่าย
+        term_pi = 32.0 / (np.pi ** 2)
+        term_n2 = 1.0 / (n ** 2)
+        term_h = H_soil / H_m if H_m > 0 else 0
+        term_k = kc_value / km_value if km_value > 0 else 0
+        term_b = (B_sand / d_w_m) ** 2
         
-        col_sm1, col_sm2 = st.columns(2)
-        with col_sm1:
-            st.success(f"➔ **ค่าดัชนีความต้านทาน $L$ ที่คำนวณได้:** `L = {L_factor:.4f}`")
-        with col_sm2:
-            st.info(f"➔ **ตัวหารรวมในสมการ $F(n) + 0.8L$:** `{Fn:.3f} + 0.8({L_factor:.4f}) = {denom:.4f}`")
+        col_l1, col_l2, col_l3 = st.columns(3)
+        with col_l1:
+            st.metric("พจน์ที่ 1: 32 / π²", f"{term_pi:.4f}")
+            st.metric("พจน์ที่ 2: 1 / n²", f"{term_n2:.4f}")
+        with col_l2:
+            st.metric("พจน์ที่ 3: H / Hm", f"{term_h:.2f} ({H_soil}/{H_m})")
+            st.metric("พจน์ที่ 4: kc / km", f"{term_k:.2e}")
+        with col_l3:
+            st.metric("พจน์ที่ 5: (B / dw)²", f"{term_b:.2f}")
+            st.metric("ผลลัพธ์ค่าดัชนี L", f"{L_factor:.4f}", delta="คำนวณแล้ว")
+
+        st.markdown("##### 📌 ขั้นตอนที่ 6.2: การแทนค่าในตัวหารรวมและคำนวณ $U_r$ ด้านล่าง")
+        st.write(f"* **ค่า $F(n)$ ที่ได้จากข้อ ⑤:** `{Fn:.3f}`")
+        st.write(f"* **พอมนต์คำนวณ $0.8L$:** `0.8 × {L_factor:.4f} = {0.8 * L_factor:.4f}`")
+        st.write(f"* **ตัวหารรวมในสมการ $[F(n) + 0.8L]$:** `{Fn:.3f} + {0.8 * L_factor:.4f} = \mathbf{{{denom:.4f}}}`")
+        
+        st.success(f"➔ **สรุปค่า $L$ ที่ได้:** `L = {L_factor:.4f}` และตัวหารรวมเท่ากับ **`{denom:.4f}`**")
     else:
         st.latex(r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n)} \right)")
-        st.info("ℹ️ ปัจจุบันไม่ได้เลือกใช้งานการคิดผลกระทบจาก Sand Mat (ค่าสัมประสิทธิ์ $L = 0$ และตัวหารใช้เพียง $F(n)$ ปกติ)")
+        st.info("ℹ️ สถานะปัจจุบัน: ไม่ได้เลือกเปิดใช้งาน Sand Mat (ค่า $L = 0$ และตัวหารใช้ค่า $F(n)$ ปกติ)")
 
-    # ตารางคำนวณ Ur รายช่วงเวลา
+    # ตารางคำนวณ Ur รายช่วงเวลาแสดงผลด้านล่าง
+    st.markdown("##### 📌 ตารางแสดงผลการคำนวณค่า $U_r$ ตามช่วงเวลาต่างๆ:")
     de2_cm2 = d_e_cm**2
     test_days = sorted(list(set([30, 60, target_day, 180])))
     ur_rows = []
@@ -465,7 +465,7 @@ with tab_steps:
             "(4) de² (cm²)": f"{de2_cm2:.0f}",
             "(5) Cr × t (cm²)": f"{cr_t:.0f}",
             "(6) Tr = (5)/(4)": f"{Tr_val:.4f}",
-            "(7) ตัวหาร (Fn + 0.8L)": f"{denom:.3f}",
+            "(7) ตัวหารรวม": f"{denom:.3f}",
             "(8) exp(-8Tr/ตัวหาร)": f"{exp_term:.4f}",
             "(9) Ur (%) = 1 - (8)": f"★ {ur_val:.2f}%" if d_val == target_day else f"{ur_val:.2f}%"
         })
@@ -531,7 +531,7 @@ with tab_steps:
     else:
         st.warning(f"⚠️ **บทสรุปข้อ ⑨:** ณ วันเป้าหมายที่ {target_day} วัน ชั้นดินอัดตัวคายน้ำได้เพียง **{Uav_target_pct:.2f}%** (ยังไม่ผ่านเกณฑ์ > 90%) แนะนำให้ลดระยะห่าง $S$ ลง หรือเพิ่มเวลาการรอคอยครับ")
 
-    # ★ การคำนวณ S_final (ใช้อ้างอิงค่า H_sfinal ที่แยกออกมาใหม่)
+    # S_final Calculation
     st.markdown("---")
     st.markdown("#### ★ การคำนวณการทรุดตัวสูงสุด ($S_{final}$) ที่เกิดขึ้นเมื่อสิ้นสุดกระบวนการ")
     col_sf1, col_sf2 = st.columns([1, 1.5])
