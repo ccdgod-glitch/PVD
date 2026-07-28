@@ -283,7 +283,7 @@ with st.sidebar.expander("🧪 คุณสมบัติดิน & ผลท�
 
 
 # --- เพิ่มในส่วน Sidebar เป้าหมาย & Sand Mat ---
- with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับน้ำ)", expanded=True):
+with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับน้ำ)", expanded=True):
     include_sandmat = st.checkbox("คิดผลกระทบความต้านทาน Sand Mat", value=False, key="mem_sandmat", on_change=update_url)
     if include_sandmat:
         H_m = st.number_input("ความหนาแผ่นทราย H_m (m)", value=0.80, step=0.1, key="mem_Hm", on_change=update_url)
