@@ -265,7 +265,7 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
 
     Cc = st.number_input("Compression Index (Cc)", value=get_param("Cc", float, 0.80), step=0.05, key="mem_Cc", on_change=update_url)
     
-    # เพิ่มค่าความหนาชั้นดินสำหรับ S_final ไว้บริเวณเดียวกับ e0 และ Cc ตามที่คุณต้องการ
+    # ความหนาชั้นดินสำหรับ S_final ไว้บริเวณเดียวกับ e0 และ Cc ตามที่คุณต้องการ
     H_sfinal = st.number_input("ความหนาชั้นดินคำนวณทรุดตัว: H_sfinal (m)", value=get_param("H_sfinal", float, 30.0), step=1.0, key="mem_H_sfinal", on_change=update_url)
 
     sigma_0 = st.number_input("Effective Stress เดิม: σ0' (kPa)", value=get_param("sigma_0", float, 50.0), step=5.0, key="mem_sigma_0", on_change=update_url)
@@ -306,6 +306,7 @@ Fn = ((n**2) / (n**2 - 1)) * np.log(n) - ((3 * n**2 - 1) / (4 * n**2))
 F_n_eff = Fn + (kh_ks_ratio - 1) * np.log(d_s_ratio) if include_smear else Fn
 
 if include_sandmat and H_m > 0 and km_value > 0:
+    # L = (32 / pi^2) * (1 / n^2) * (H / H_m) * (kc / km) * (B / dw)^2  (ใช้ H_soil เป็นความลึก H ของชั้นดินเหนียว)
     L_factor = (32.0 / (np.pi ** 2)) * (1.0 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / d_w_m) ** 2)
 else:
     L_factor = 0.0
@@ -417,10 +418,36 @@ with tab_steps:
     st.table(pd.DataFrame(fn_rows))
     st.info(f"💡 **ผลลัพธ์ข้อ ⑤:** ที่ระยะติดตั้ง $S = {S:.2f}$ m คำนวณค่าอัตราส่วน $n = {n:.2f}$ ได้ค่า **$F(n) = {Fn:.3f}$**")
 
-    # STEP 6: Ur
+    # STEP 6: Ur & Sand Mat (ตามรูปที่เพิ่มเข้ามา)
     st.markdown("---")
-    st.markdown("#### ⑥ ตารางคำนวณเพื่อหาค่า Degree of Consolidation ในแนวรัศมี ($U_r$)")
+    st.markdown("#### ⑥ การคำนวณอัตราการอัดตัวคายน้ำ กรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat)")
     
+    if include_sandmat:
+        st.write("สมการคำนวณอัตราการอัดตัวคายน้ำในแนวรัศมี ($U_r$) เมื่อพิจารณาความต้านทานของแผ่นทรายซับน้ำ:")
+        st.latex(r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n) + 0.8L} \right)")
+        
+        st.write("โดยมีสมการคำนวณหาค่าดัชนีความต้านทานต่อการระบายน้ำ ($L$) ของทรายซับน้ำดังนี้:")
+        st.latex(r"L = \frac{32}{\pi^2} \cdot \frac{1}{n^2} \cdot \frac{H}{H_m} \cdot \frac{k_c}{k_m} \cdot \left(\frac{B}{d_w}\right)^2")
+        
+        st.markdown("##### 📌 รายละเอียดตัวแปรและการแทนค่าคำนวณค่า $L$:")
+        st.write(f"- **$n$ (Drainage spacing factor / อัตราส่วนพื้นที่ระบายน้ำ):** `{n:.2f}` (➔ $n^2 = {n**2:.2f}$)")
+        st.write(f"- **$H$ (ความลึกของชั้นดินเหนียว):** `{H_soil}` m")
+        st.write(f"- **$H_m$ (ความหนาของแผ่นทราย Sand Mat):** `{H_m}` m")
+        st.write(f"- **$B$ (ครึ่งหนึ่งของความกว้างแผ่นทราย):** `{B_sand}` m")
+        st.write(f"- **$d_w$ (ขนาดเส้นผ่านศูนย์กลางเทียบเท่าของท่อระบายน้ำ):** `{d_w_m:.3f}` m")
+        st.write(f"- **$k_c$ (ค่าการซึมน้ำของดินเหนียว):** `{kc_value:.1e}` cm/s")
+        st.write(f"- **$k_m$ (ค่าการซึมน้ำของแผ่นทราย):** `{km_value:.1e}` cm/s")
+        
+        col_sm1, col_sm2 = st.columns(2)
+        with col_sm1:
+            st.success(f"➔ **ค่าดัชนีความต้านทาน $L$ ที่คำนวณได้:** `L = {L_factor:.4f}`")
+        with col_sm2:
+            st.info(f"➔ **ตัวหารรวมในสมการ $F(n) + 0.8L$:** `{Fn:.3f} + 0.8({L_factor:.4f}) = {denom:.4f}`")
+    else:
+        st.latex(r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n)} \right)")
+        st.info("ℹ️ ปัจจุบันไม่ได้เลือกใช้งานการคิดผลกระทบจาก Sand Mat (ค่าสัมประสิทธิ์ $L = 0$ และตัวหารใช้เพียง $F(n)$ ปกติ)")
+
+    # ตารางคำนวณ Ur รายช่วงเวลา
     de2_cm2 = d_e_cm**2
     test_days = sorted(list(set([30, 60, target_day, 180])))
     ur_rows = []
@@ -428,7 +455,7 @@ with tab_steps:
     for d_val in test_days:
         cr_t = Cr_cm2_day * d_val
         Tr_val = cr_t / de2_cm2
-        exp_term = np.exp((-8 * Tr_val) / Fn)
+        exp_term = np.exp((-8 * Tr_val) / denom)
         ur_val = (1 - exp_term) * 100.0
         
         ur_rows.append({
@@ -438,28 +465,13 @@ with tab_steps:
             "(4) de² (cm²)": f"{de2_cm2:.0f}",
             "(5) Cr × t (cm²)": f"{cr_t:.0f}",
             "(6) Tr = (5)/(4)": f"{Tr_val:.4f}",
-            "(7) F(n)": f"{Fn:.3f}",
-            "(8) exp(-8Tr/Fn)": f"{exp_term:.4f}",
+            "(7) ตัวหาร (Fn + 0.8L)": f"{denom:.3f}",
+            "(8) exp(-8Tr/ตัวหาร)": f"{exp_term:.4f}",
             "(9) Ur (%) = 1 - (8)": f"★ {ur_val:.2f}%" if d_val == target_day else f"{ur_val:.2f}%"
         })
     st.table(pd.DataFrame(ur_rows))
     
-    Ur_target = df.loc[df["Day"] == target_day, "U_r"].values[0] if target_day <= 365 else (1 - np.exp((-8 * (Cr_cm2_day * target_day) / de2_cm2) / Fn)) * 100
-    st.markdown("### 🏖️ การคำนวณกรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat)")
-
-    if include_sandmat:
-        st.latex(r"L = \frac{32}{\pi^2} \cdot \frac{1}{n^2} \cdot \frac{H}{H_m} \cdot \frac{k_c}{k_m} \cdot \left(\frac{B}{d_w}\right)^2")
-        st.latex(r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n) + 0.8L} \right)")
-        
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.write(f"• **ดัชนีความต้านทาน (L):** `{L_factor:.4f}`")
-            st.write(f"• **ความหนา Sand Mat ($H_m$):** {H_m} m")
-        with col_b:
-            st.write(f"• **อัตราส่วน $k_c / k_m$:** {kc_value/km_value:.2e}")
-            st.write(f"• **ตัวหาร $F(n) + 0.8L$:** `{denom:.4f}`")
-    else:
-        st.info("ℹ️ ไม่ได้เปิดใช้งานการคิดผลกระทบจาก Sand Mat (ค่าสัมประสิทธิ์ $L = 0$)")
+    Ur_target = df.loc[df["Day"] == target_day, "U_r"].values[0] if target_day <= 365 else (1 - np.exp((-8 * (Cr_cm2_day * target_day) / de2_cm2) / denom)) * 100
 
     # STEP 7: Uv
     st.markdown("---")
@@ -498,7 +510,7 @@ with tab_steps:
             r = df[df["Day"] == d_val].iloc[0]
             ur_p, uv_p, uav_p = r['U_r'], r['U_v'], r['U_av']
         else:
-            ur_p = (1 - np.exp((-8 * (Cr_cm2_day * d_val) / de2_cm2) / Fn)) * 100
+            ur_p = (1 - np.exp((-8 * (Cr_cm2_day * d_val) / de2_cm2) / denom)) * 100
             tv_tmp = (Cv_cm2_day * d_val) / (H_d_cm**2)
             uv_tmp = np.sqrt(4 * tv_tmp) / np.pi if tv_tmp <= 0.286 else 1 - (10**(-0.085 - 0.933 * tv_tmp))
             uv_p = min(uv_tmp * 100, 100)
