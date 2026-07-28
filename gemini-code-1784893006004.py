@@ -189,7 +189,6 @@ st.markdown('<div class="sub-header">ระบบจำลองการทร�
 # ---------------------------------------------------------
 st.sidebar.title("⚙️ ตั้งค่าพารามิเตอร์การออกแบบ")
 
-# ฟังก์ชันดึงค่าจาก URL หากไม่มีจะใช้ค่าเริ่มต้น (Default)
 def get_param(key, default_type, default_val):
     val = st.query_params.get(key, default_val)
     try:
@@ -200,7 +199,6 @@ def get_param(key, default_type, default_val):
     except:
         return default_val
 
-# ฟังก์ชันอัปเดต URL อัตโนมัติเมื่อมีการเปลี่ยนค่าในปุ่มต่างๆ
 def update_url():
     for key, val in st.session_state.items():
         if key.startswith("mem_"):
@@ -249,7 +247,6 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
         Cr_cm2_day = (Cr_m2_yr / 365.25) * 10000.0
 
     st.markdown("---")
-    # 🎯 ตัวเลือกคำนวณ e0 จากผลทดสอบ Lab มารวมในส่วนที่ 2 นี้
     use_lab_data = st.checkbox("คำนวณ e₀ จากผลทดสอบ Lab", value=get_param("uselab", bool, False), key="mem_uselab", on_change=update_url)
     if use_lab_data:
         Gs = st.number_input("Specific Gravity (Gs)", value=get_param("Gs", float, 2.65), step=0.01, key="mem_Gs", on_change=update_url)
@@ -265,11 +262,9 @@ with st.sidebar.expander("🧪 2. คุณสมบัติชั้นดิ�
     else:
         e0 = st.number_input("Initial Void Ratio (e0)", value=get_param("e0", float, 2.00), step=0.1, key="mem_e0", on_change=update_url)
 
-    # 🎯 ช่องกรอก Cc เอาไว้คำนวณ S_final ตามที่ต้องการ
     Cc = st.number_input("Compression Index (Cc)", value=get_param("Cc", float, 0.80), step=0.05, key="mem_Cc", on_change=update_url)
     sigma_0 = st.number_input("Effective Stress เดิม: σ0' (kPa)", value=get_param("sigma_0", float, 50.0), step=5.0, key="mem_sigma_0", on_change=update_url)
     delta_sigma = st.number_input("น้ำหนักถมเพิ่ม: Δσ (kPa)", value=get_param("delta_sigma", float, 80.0), step=5.0, key="mem_delta_sigma", on_change=update_url)
-
 
 with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมาย & Smear Effect", expanded=True):
     target_day = st.number_input("วันเป้าหมายหลักที่ต้องการตรวจสอบ (วัน)", value=get_param("target_day", int, 90), step=10, min_value=1, key="mem_target_day", on_change=update_url)
@@ -280,14 +275,11 @@ with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมา�
     else:
         d_s_ratio, kh_ks_ratio = 1.0, 1.0
 
-
 with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับน้ำ)", expanded=True):
     include_sandmat = st.checkbox("คิดผลกระทบความต้านทาน Sand Mat", value=get_param("sandmat", bool, False), key="mem_sandmat", on_change=update_url)
     if include_sandmat:
         H_m = st.number_input("ความหนาแผ่นทราย H_m (m)", value=get_param("Hm", float, 0.80), step=0.1, key="mem_Hm", on_change=update_url)
         B_sand = st.number_input("ความกว้างครึ่งหนึ่งของแผ่นทราย B (m)", value=get_param("Bsand", float, 5.0), step=0.5, key="mem_Bsand", on_change=update_url)
-        
-        # 🎯 ปรับเปลี่ยนการแสดงผลข้อความกำกับ (Label) ให้เป็นเลขยกกำลัง
         kc_value = st.number_input("การซึมน้ำดินเหนียว $k_c$ ($10^{-7}$ cm/s)", value=get_param("kc", float, 1e-7), format="%.2e", key="mem_kc", on_change=update_url)
         km_value = st.number_input("การซึมน้ำแผ่นทราย $k_m$ ($10^{-3}$ cm/s)", value=get_param("km", float, 1e-3), format="%.2e", key="mem_km", on_change=update_url)
     else:
@@ -296,88 +288,52 @@ with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับ
 # =========================================================
 # 5. CALCULATION ENGINE
 # =========================================================
-# ---------------------------------------------------------
-# Step 1: เรขาคณิต PVD
-# ---------------------------------------------------------
 a_m, b_m = a_mm / 1000.0, b_mm / 1000.0
-d_w_m = (a_m + b_m) / 2.0  # วิธีของ Rixner ตามสไลด์
+d_w_m = (a_m + b_m) / 2.0
 d_w_cm = d_w_m * 100.0
 d_w_mm = d_w_m * 1000.0
 
 d_e_m = 1.05 * S if "สามเหลี่ยม" in pattern else 1.13 * S
 d_e_cm = d_e_m * 100.0
-
 n = d_e_m / d_w_m
 
-# ---------------------------------------------------------
-# Step 2: ตัวประกอบระยะห่าง F(n), Smear Effect & Sand Mat (L)
-# ---------------------------------------------------------
-# 2.1 คำนวณ Fn หลัก
 Fn = ((n**2) / (n**2 - 1)) * np.log(n) - ((3 * n**2 - 1) / (4 * n**2))
+F_n_eff = Fn + (kh_ks_ratio - 1) * np.log(d_s_ratio) if include_smear else Fn
 
-# 2.2 คิดผล Smear Effect (ถ้ามี)
-if include_smear:
-    F_n_eff = Fn + (kh_ks_ratio - 1) * np.log(d_s_ratio)
-else:
-    F_n_eff = Fn
-
-# 2.3 คิดผล Sand Mat (L)
 if include_sandmat and H_m > 0 and km_value > 0:
     L_factor = (32.0 / (np.pi ** 2)) * (1.0 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / d_w_m) ** 2)
 else:
     L_factor = 0.0
 
-# 2.4 ตัวหารรวมสำหรับ Ur
 denom = F_n_eff + (0.8 * L_factor)
-
-# ---------------------------------------------------------
-# Step 3: ระยะระบายน้ำ & การยุบตัวสูงสุด (S_final)
-# ---------------------------------------------------------
 H_d_m = H_soil / 2.0 if "2 ทาง" in drainage_type else H_soil
 H_d_cm = H_d_m * 100.0
-
 S_final = H_soil * (Cc / (1.0 + e0)) * np.log10((sigma_0 + delta_sigma) / sigma_0)
 
-# ---------------------------------------------------------
-# Step 4: คำนวณ ณ วันเป้าหมาย (target_day)
-# ---------------------------------------------------------
 t_day = float(target_day)
-
-# 4.1 แนวดิ่ง (Uv)
 Tv = (Cv_cm2_day * t_day) / (H_d_cm ** 2)
-if Tv <= 0.282:
-    Uv = (2.0 * np.sqrt(Tv)) / np.sqrt(np.pi)
-else:
-    Uv = 1.0 - (10 ** (-(Tv + 0.085) / 0.933))
+Uv = (2.0 * np.sqrt(Tv)) / np.sqrt(np.pi) if Tv <= 0.282 else 1.0 - (10 ** (-(Tv + 0.085) / 0.933))
 Uv = min(max(Uv, 0.0), 1.0)
 
-# 4.2 แนวรัศมี (Ur)
 Tr = (Cr_cm2_day * t_day) / (d_e_cm ** 2)
 Ur = 1.0 - np.exp((-8.0 * Tr) / denom)
 Ur = min(max(Ur, 0.0), 1.0)
 
-# 4.3 รวม Uav และการยุบตัว St
 Uav = 1.0 - ((1.0 - Ur) * (1.0 - Uv))
 St = Uav * S_final
 
-# ---------------------------------------------------------
-# Step 5: สร้างตารางและข้อมูลสำหรับทำกราฟ (1 - 365 วัน)
-# ---------------------------------------------------------
 days = np.arange(1, 366)
 U_v_list, U_r_list, U_av_list, S_t_list = [], [], [], []
 
 for d_day in days:
-    # Tv & Uv
     Tv_i = (Cv_cm2_day * d_day) / (H_d_cm ** 2)
     U_v_i = (2.0 * np.sqrt(Tv_i)) / np.sqrt(np.pi) if Tv_i <= 0.282 else 1.0 - (10 ** (-(Tv_i + 0.085) / 0.933))
     U_v_i = min(max(U_v_i, 0.0), 1.0)
     
-    # Tr & Ur
     Tr_i = (Cr_cm2_day * d_day) / (d_e_cm ** 2)
     U_r_i = 1.0 - np.exp((-8.0 * Tr_i) / denom)
     U_r_i = min(max(U_r_i, 0.0), 1.0)
     
-    # Uav & St
     U_av_i = 1.0 - ((1.0 - U_r_i) * (1.0 - U_v_i))
     S_t_i = U_av_i * S_final
     
@@ -394,7 +350,6 @@ df = pd.DataFrame({
     "Settlement": S_t_list
 })
 
-# หาวันที่ Uav ถึง 90%
 u90_idx = df[df["U_av"] >= 90.0].first_valid_index()
 days_90 = df.loc[u90_idx, "Day"] if u90_idx is not None else "> 365"
 
@@ -424,18 +379,6 @@ tab_steps, tab_charts, tab_data, tab_summary = st.tabs([
 with tab_steps:
     st.markdown(f"### 📑 ตารางคำนวณและตรวจสอบที่ระยะ $S = {S:.2f}$ m ณ เวลา $t = {target_day}$ วัน")
     st.caption("จำลองวิธีคิดเลขทีละคอลัมน์ ถอดแบบจากสไลด์เลคเชอร์และตำราปฐพีวิศวกรรม")
-    
-    # 🎯 เพิ่มการแสดงผลการคำนวณ S_final เข้ามาที่นี่
-    st.markdown("---")
-    st.markdown("#### ★ การคำนวณการทรุดตัวสูงสุด ($S_{final}$) ที่เกิดขึ้นเมื่อสิ้นสุดกระบวนการ")
-    col_sf1, col_sf2 = st.columns([1, 1.5])
-    with col_sf1:
-        st.latex(r"S_{final} = H_{soil} \cdot \frac{C_c}{1 + e_0} \cdot \log_{10}\left(\frac{\sigma_0' + \Delta\sigma}{\sigma_0'}\right)")
-    with col_sf2:
-        st.write("**แสดงการแทนค่าตัวเลขจากพารามิเตอร์ที่กำหนด:**")
-        st.latex(f"S_{{final}} = {H_soil:.2f} \\cdot \\frac{{{Cc:.3f}}}{{1 + {e0:.3f}}} \\cdot \\log_{{10}}\\left(\\frac{{{sigma_0:.2f} + {delta_sigma:.2f}}}{{{sigma_0:.2f}}}\\right)")
-        st.write(f"- 💡 **การทรุดตัวสูงสุด ($S_{{final}}$):** $\\mathbf{{{S_final:.4f}}}$ **เมตร** (หรือ `{S_final*100:.2f}` cm)")
-        st.write(f"- 💡 **การทรุดตัว ณ วันที่ {target_day} ($S_t = U_{{av}} \\times S_{{final}}$):** $\\mathbf{{{St:.4f}}}$ **เมตร** (หรือ `{St*100:.2f}` cm)")
     
     # STEP 5: F(n)
     st.markdown("---")
@@ -569,6 +512,18 @@ with tab_steps:
     else:
         st.warning(f"⚠️ **บทสรุปข้อ ⑨:** ณ วันเป้าหมายที่ {target_day} วัน ชั้นดินอัดตัวคายน้ำได้เพียง **{Uav_target_pct:.2f}%** (ยังไม่ผ่านเกณฑ์ > 90%) แนะนำให้ลดระยะห่าง $S$ ลง หรือเพิ่มเวลาการรอคอยครับ")
 
+    # 🎯 ย้ายการแสดงผลการคำนวณ S_final มาอยู่ด้านล่างสุดตรงนี้ครับ
+    st.markdown("---")
+    st.markdown("#### ★ การคำนวณการทรุดตัวสูงสุด ($S_{final}$) ที่เกิดขึ้นเมื่อสิ้นสุดกระบวนการ")
+    col_sf1, col_sf2 = st.columns([1, 1.5])
+    with col_sf1:
+        st.latex(r"S_{final} = H_{soil} \cdot \frac{C_c}{1 + e_0} \cdot \log_{10}\left(\frac{\sigma_0' + \Delta\sigma}{\sigma_0'}\right)")
+    with col_sf2:
+        st.write("**แสดงการแทนค่าตัวเลขจากพารามิเตอร์ที่กำหนด:**")
+        st.latex(f"S_{{final}} = {H_soil:.2f} \\cdot \\frac{{{Cc:.3f}}}{{1 + {e0:.3f}}} \\cdot \\log_{{10}}\\left(\\frac{{{sigma_0:.2f} + {delta_sigma:.2f}}}{{{sigma_0:.2f}}}\\right)")
+        st.write(f"- 💡 **การทรุดตัวสูงสุด ($S_{{final}}$):** $\\mathbf{{{S_final:.4f}}}$ **เมตร** (หรือ `{S_final*100:.2f}` cm)")
+        st.write(f"- 💡 **การทรุดตัว ณ วันที่ {target_day} ($S_t = U_{{av}} \\times S_{{final}}$):** $\\mathbf{{{St:.4f}}}$ **เมตร** (หรือ `{St*100:.2f}` cm)")
+
 # =========================================================
 # TAB 2-4: กราฟ, ข้อมูล และส่งออก Word Report
 # =========================================================
@@ -607,7 +562,6 @@ with tab_summary:
     st.markdown("#### 📄 ส่งออกรายงานสรุปผลพร้อมตารางคำนวณ (Word Document)")
     st.write("กดปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์เอกสาร `.docx` สรุปผลพร้อมตารางคำนวณประกอบรายงาน")
     
-    # --- ประกาศตัวแปรเปอร์เซ็นต์สำหรับรายงาน ---
     Uav_target_pct = Uav * 100.0
     Ur_target = Ur * 100.0
     Uv_target_pct = Uv * 100.0
