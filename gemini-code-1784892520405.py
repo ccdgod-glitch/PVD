@@ -288,7 +288,7 @@ with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับ
     if include_sandmat:
         H_m = st.number_input("ความหนาแผ่นทราย H_m (m)", value=0.80, step=0.1, key="mem_Hm", on_change=update_url)
         B_sand = st.number_input("ความกว้างครึ่งหนึ่งของแผ่นทราย B (m)", value=5.0, step=0.5, key="mem_Bsand", on_change=update_url)
-        kc_value = st.number_input("การซึมน้ำดินเหนียว k_c (cm/s)", value=1e-7, format="%.2e", key="mem_kc", on_change=update_url)
+        kc_value = st.number_input("การซึมน้ำดินเหนียว $k_c$ ($\times 10^{-7}$ cm/s)", ...)
         km_value = st.number_input("การซึมน้ำแผ่นทราย k_m (cm/s)", value=1e-3, format="%.2e", key="mem_km", on_change=update_url)
     else:
         H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3        
