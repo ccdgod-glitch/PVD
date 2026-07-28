@@ -262,6 +262,36 @@ with st.sidebar.expander("🎯 3. กำหนดวันเป้าหมา�
         kh_ks_ratio = st.number_input("อัตราส่วน kh / ks", value=get_param("kh_ks", float, 3.0), step=0.5, key="mem_kh_ks", on_change=update_url)
     else:
         d_s_ratio, kh_ks_ratio = 1.0, 1.0
+# --- เพิ่มในส่วน Sidebar ข้อมูลดิน (คำนวณ e0 จาก Lab) ---
+with st.sidebar.expander("🧪 คุณสมบัติดิน & ผลทดสอบ Lab", expanded=False):
+    use_lab_data = st.checkbox("คำนวณ e₀ จากผลทดสอบ Lab", value=False)
+    if use_lab_data:
+        Gs = st.number_input("Specific Gravity (Gs)", value=2.65, step=0.01)
+        w_wet = st.number_input("น้ำหนักดินเปียก W_wet (g)", value=120.0, step=1.0)
+        w_dry = st.number_input("น้ำหนักดินแห้ง W_dry (g)", value=80.0, step=1.0)
+        V_cm3 = st.number_input("ปริมาตรวงแหวน V (cm³)", value=60.0, step=1.0)
+        gamma_w = 1.0 # g/cm³
+        
+        # คำนวณ e0 จาก Lab
+        w_water_content = (w_wet - w_dry) / w_dry
+        gamma_bulk = w_wet / V_cm3
+        gamma_d = gamma_bulk / (1 + w_water_content)
+        e0 = ((Gs * gamma_w) / gamma_d) - 1.0
+        st.info(f"💡 e₀ ที่คำนวณได้ = **{e0:.3f}**")
+    else:
+        e0 = st.number_input("Initial Void Ratio (e₀)", value=1.10, step=0.05)
+
+
+# --- เพิ่มในส่วน Sidebar เป้าหมาย & Sand Mat ---
+ with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับน้ำ)", expanded=True):
+    include_sandmat = st.checkbox("คิดผลกระทบความต้านทาน Sand Mat", value=False, key="mem_sandmat", on_change=update_url)
+    if include_sandmat:
+        H_m = st.number_input("ความหนาแผ่นทราย H_m (m)", value=0.80, step=0.1, key="mem_Hm", on_change=update_url)
+        B_sand = st.number_input("ความกว้างครึ่งหนึ่งของแผ่นทราย B (m)", value=5.0, step=0.5, key="mem_Bsand", on_change=update_url)
+        kc_value = st.number_input("การซึมน้ำดินเหนียว k_c (cm/s)", value=1e-7, format="%.2e", key="mem_kc", on_change=update_url)
+        km_value = st.number_input("การซึมน้ำแผ่นทราย k_m (cm/s)", value=1e-3, format="%.2e", key="mem_km", on_change=update_url)
+    else:
+        H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3        
 
 # ---------------------------------------------------------
 # 5. CALCULATION ENGINE
@@ -312,6 +342,21 @@ df = pd.DataFrame({"Day": days, "U_v": U_v_list, "U_r": U_r_list, "U_av": U_av_l
 
 u90_idx = df[df["U_av"] >= 90].first_valid_index()
 days_90 = df.loc[u90_idx, "Day"] if u90_idx is not None else "> 365"
+import numpy as np
+
+# 1. คำนวณดัชนีความต้านทาน L ของ Sand Mat
+if include_sandmat and H_m > 0 and km_value > 0:
+    # dw แปลงเป็นเมตร (dw_m)
+    L_factor = (32 / (np.pi ** 2)) * (1 / (n ** 2)) * (H_soil / H_m) * (kc_value / km_value) * ((B_sand / dw_m) ** 2)
+else:
+    L_factor = 0.0
+
+# 2. คำนวณ U_r แบบพิจารณา L (Sand Mat) และ F(n) / Smear Effect
+# Denominator = F_n_eff + 0.8 * L_factor
+denom = F_n_eff + (0.8 * L_factor)
+
+# สูตร Ur พิจารณา Sand Mat
+Ur = 1.0 - np.exp((-8.0 * T_r) / denom)
 
 # ---------------------------------------------------------
 # 6. DASHBOARD DISPLAY
@@ -398,6 +443,21 @@ with tab_steps:
     st.table(pd.DataFrame(ur_rows))
     
     Ur_target = df.loc[df["Day"] == target_day, "U_r"].values[0] if target_day <= 365 else (1 - np.exp((-8 * (Cr_cm2_day * target_day) / de2_cm2) / Fn)) * 100
+    st.markdown("### 🏖️ การคำนวณกรณีพิจารณาผลกระทบจากทรายซับน้ำ (Sand Mat)")
+
+if include_sandmat:
+    st.latex(r"L = \frac{32}{\pi^2} \cdot \frac{1}{n^2} \cdot \frac{H}{H_m} \cdot \frac{k_c}{k_m} \cdot \left(\frac{B}{d_w}\right)^2")
+    st.latex(r"U_r = 1 - \exp\left( \frac{-8T_r}{F(n) + 0.8L} \right)")
+    
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.write(f"• **ดัชนีความต้านทาน (L):** `{L_factor:.4f}`")
+        st.write(f"• **ความหนา Sand Mat ($H_m$):** {H_m} m")
+    with col_b:
+        st.write(f"• **อัตราส่วน $k_c / k_m$:** {kc_value/km_value:.2e}")
+        st.write(f"• **ตัวหาร $F(n) + 0.8L$:** `{denom:.4f}`")
+else:
+    st.info("ℹ️ ไม่ได้เปิดใช้งานการคิดผลกระทบจาก Sand Mat (ค่า $L = 0$)")
 
     # STEP 7: Uv
     st.markdown("---")
