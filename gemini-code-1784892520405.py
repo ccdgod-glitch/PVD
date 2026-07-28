@@ -282,16 +282,17 @@ with st.sidebar.expander("🧪 คุณสมบัติดิน & ผลท�
         e0 = st.number_input("Initial Void Ratio (e₀)", value=1.10, step=0.05)
 
 
-# --- เพิ่มในส่วน Sidebar เป้าหมาย & Sand Mat ---
 with st.sidebar.expander("🏖️ 4. Sand Mat (ชั้นทรายซับน้ำ)", expanded=True):
-    include_sandmat = st.checkbox("คิดผลกระทบความต้านทาน Sand Mat", value=False, key="mem_sandmat", on_change=update_url)
+    include_sandmat = st.checkbox("คิดผลกระทบความต้านทาน Sand Mat", value=get_param("sandmat", bool, False), key="mem_sandmat", on_change=update_url)
     if include_sandmat:
-        H_m = st.number_input("ความหนาแผ่นทราย H_m (m)", value=0.80, step=0.1, key="mem_Hm", on_change=update_url)
-        B_sand = st.number_input("ความกว้างครึ่งหนึ่งของแผ่นทราย B (m)", value=5.0, step=0.5, key="mem_Bsand", on_change=update_url)
-        kc_value = st.number_input("การซึมน้ำดินเหนียว $k_c$ ($\times 10^{-7}$ cm/s)", ...)
-        km_value = st.number_input("การซึมน้ำแผ่นทราย k_m (cm/s)", value=1e-3, format="%.2e", key="mem_km", on_change=update_url)
+        H_m = st.number_input("ความหนาแผ่นทราย H_m (m)", value=get_param("Hm", float, 0.80), step=0.1, key="mem_Hm", on_change=update_url)
+        B_sand = st.number_input("ความกว้างครึ่งหนึ่งของแผ่นทราย B (m)", value=get_param("Bsand", float, 5.0), step=0.5, key="mem_Bsand", on_change=update_url)
+        
+        # 🎯 ปรับเปลี่ยนการแสดงผลข้อความกำกับ (Label) ให้เป็นเลขยกกำลัง
+        kc_value = st.number_input("การซึมน้ำดินเหนียว $k_c$ ($10^{-7}$ cm/s)", value=get_param("kc", float, 1e-7), format="%.2e", key="mem_kc", on_change=update_url)
+        km_value = st.number_input("การซึมน้ำแผ่นทราย $k_m$ ($10^{-3}$ cm/s)", value=get_param("km", float, 1e-3), format="%.2e", key="mem_km", on_change=update_url)
     else:
-        H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3        
+        H_m, B_sand, kc_value, km_value = 0.80, 5.0, 1e-7, 1e-3     
 
 # =========================================================
 # 5. CALCULATION ENGINE (ปรับปรุงลำดับและแก้ชื่อตัวแปรแล้ว)
