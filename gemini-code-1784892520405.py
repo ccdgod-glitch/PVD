@@ -598,28 +598,33 @@ with tab_summary:
     st.markdown("#### 📄 ส่งออกรายงานสรุปผลพร้อมตารางคำนวณ (Word Document)")
     st.write("กดปุ่มด้านล่างเพื่อดาวน์โหลดไฟล์เอกสาร `.docx` สรุปผลพร้อมตารางคำนวณประกอบรายงาน")
     
-    S_target = (Uav_target_pct / 100.0) * S_final
-    
-    doc_file = generate_word_report(
-        pattern=pattern,
-        S=S,
-        H_soil=H_soil,
-        H_pvd=H_pvd,
-        Cv=Cv_cm2_day,
-        Cr=Cr_cm2_day,
-        target_day=target_day,
-        Uav_pct=Uav_target_pct,
-        Ur_pct=Ur_target,
-        Uv_pct=Uv_target_pct,
-        S_final=S_final,
-        S_target=S_target,
-        days_90=days_90,
-        d_w_mm=d_w_mm,
-        d_e_m=d_e_m,
-        n=n,
-        Fn=Fn,
-        df=df
-    )
+    # --- ประกาศตัวแปรเปอร์เซ็นต์ที่ขาดหายไป (วางแทรกตรงนี้) ---
+Uav_target_pct = Uav * 100.0
+Ur_target = Ur * 100.0
+Uv_target_pct = Uv * 100.0
+S_target = St
+
+# --- โค้ดเดิมของคุณรันต่อได้ทันที ---
+doc_file = generate_word_report(
+    pattern=pattern,
+    S=S,
+    H_soil=H_soil,
+    H_pvd=H_pvd,
+    Cv=Cv_cm2_day,
+    Cr=Cr_cm2_day,
+    target_day=target_day,
+    Uav_pct=Uav_target_pct,
+    Ur_pct=Ur_target,
+    Uv_pct=Uv_target_pct,
+    S_final=S_final,
+    S_target=S_target,
+    days_90=days_90,
+    d_w_mm=d_w_mm,
+    d_e_m=d_e_m,
+    n=n,
+    Fn=Fn,
+    df=df
+)
     
     st.download_button(
         label="📥 ดาวน์โหลดรายงานสรุปผลพร้อมตาราง (Word File .docx)",
